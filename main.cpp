@@ -1,30 +1,41 @@
 #include "Polynet/polynet.hpp"
 #include <thread>
 
-std::string get_network_error() {
-    switch (pn::get_last_error()) {
-        case PN_ESOCKET: {
-            return pn::socket_strerror(pn::get_last_socket_error());
-        }
+#define ERR_NET std::cerr << "Network error: " << pn::universal_strerror() << std::endl
+#define ERR_CLI(msg) std::cerr << "CLI error: " << msg << std::endl
 
-        case PN_EAI: {
-            return pn::gai_strerror(pn::get_last_gai_error());
-        }
+std::pair<char*, size_t> read_until(pn::tcp::Connection& conn, char end_char) {
+    size_t buf_size = 0;
+    char* buf = (char*) malloc(buf_size);
 
-        case PN_ESUCCESS:
-        case PN_EBADADDRS: {
-            return pn::strerror(pn::get_last_error());
-        }
+    while (true) {
+        char c;
+        conn.recv(&c, 1);
 
-        default: {
-            return "Unknown error";
+        if (c != end_char) {
+            buf = (char*) realloc(buf, ++buf_size);
+            buf[buf_size - 1] = c;
+        } else {
+            break;
         }
+    }
+
+    return {buf, buf_size};
+}
+
+void route(pn::tcp::Connection a, pn::tcp::Connection b) {
+    while (true) {
+        char buf[UINT16_MAX];
+        auto result = a.recv(NULL, UINT16_MAX);
+        b.send(buf, result);
     }
 }
 
 void init_conn(pn::tcp::Connection client) {
     char method[9];
-    client.recv(method, 8, MSG_WAITALL);
+    if (client.recv(method, 8, MSG_WAITALL) == 0) {
+
+    }
     method[8] = '\0';
 
     if (strcmp(method, "CONNECT ")) {
@@ -42,14 +53,16 @@ void init_conn(pn::tcp::Connection client) {
         char c;
         client.recv(&c, 1, MSG_WAITALL);
 
-        if (c == '.') {
+        if (c == ':') {
             if (hit_port || host.size() == 0) {
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
                 client.send(response, sizeof(response) - 1);
                 client.close();
                 return;
             }
+            
             hit_port = true;
+            continue;
         }
 
         if (!hit_port) {
@@ -65,22 +78,21 @@ void init_conn(pn::tcp::Connection client) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cerr << "CLI error: Missing arguments\n";
+        ERR_CLI("Missing arguments");
         return 1;
     }
 
     pn::tcp::Server server;
     if (server.bind("0.0.0.0", argv[1]) == PN_ERROR) {
-        std::cerr << "Network error: " << get_network_error() << std::endl;
+        ERR_NET;
         return 1;
     }
 
     if (server.listen([](pn::tcp::Connection& client, void*) -> bool {
         std::thread(init_conn, client).detach();
-
         return true;
     }, 128) == PN_ERROR) {
-        std::cerr << "Network error: " << get_network_error() << std::endl;
+        ERR_NET;
         return 1;
     }
 
