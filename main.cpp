@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <csignal>
 
 #define INFO(msg)                                           \
     print_lock.lock();                                      \
@@ -221,6 +222,8 @@ void init_conn(pn::tcp::Connection conn) {
 }
 
 int main(int argc, char** argv) {
+    signal(SIGPIPE, SIG_IGN);
+
     if (argc < 2) {
         ERR_CLI("Missing arguments");
         return 1;
