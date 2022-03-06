@@ -80,8 +80,6 @@ size_t read_until(pn::tcp::Connection& conn, const std::string& end_sequence, ch
 }
 
 void route(pn::tcp::Connection a, pn::tcp::Connection b) {
-    INFO("Routing connection");
-
     char buf[UINT16_MAX];
     while (true) {
         ssize_t read_result;
@@ -109,7 +107,6 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b) {
 void init_conn(pn::tcp::Connection conn) {
     char* method;
     size_t method_len = read_until(conn, " ", &method);
-
     if (method_len != 7) {
         ERR("Invalid method");
         char response[] = "HTTP/1.1 405 Method Not Allowed\r\nAllow: CONNECT\r\n\r\n";
@@ -205,19 +202,22 @@ void init_conn(pn::tcp::Connection conn) {
         free(port);
         return;
     }
-    free(host);
-    free(port);
 
     char response[] = "HTTP/1.1 200 OK\r\n\r\n";
     if (send_all(conn, response, sizeof(response) - 1) != sizeof(response) - 1) {
         conn.close();
+        free(host);
+        free(port);
         return;
     }
 
+    INFO("Routing connection to " << host << ":" << port);
     std::thread(route, conn, proxy).detach();
     std::thread(route, proxy, conn).detach();
     conn.release();
     proxy.release();
+    free(host);
+    free(port);
 }
 
 int main(int argc, char** argv) {
