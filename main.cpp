@@ -211,6 +211,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::cout << "Networking brought to you by:" << std::endl;
     pn::init(true);
 
     pn::tcp::Server server;
