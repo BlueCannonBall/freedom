@@ -81,7 +81,7 @@ size_t read_until(pn::tcp::Connection& conn, const std::string& end_sequence, ch
 
 void route(pn::tcp::Connection a, pn::tcp::Connection b) {
     char buf[UINT16_MAX];
-    while (true) {
+    while (a.is_valid() && b.is_valid()) {
         ssize_t read_result;
         if ((read_result = a.recv(buf, sizeof(buf))) == 0) {
             INFO("Connection closed");
