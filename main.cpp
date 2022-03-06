@@ -11,6 +11,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#ifndef _WIN32
+    #include <cerrno>
+#endif
 
 #define INFO(msg)                                           \
     print_lock.lock();                                      \
