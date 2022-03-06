@@ -1,4 +1,5 @@
 #include "Polynet/polynet.hpp"
+#include <asm-generic/errno.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -248,7 +249,17 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b) {
             a.close();
             break;
         } else if (read_result == PN_ERROR) {
-            ERR_NET;
+            if (pn::get_last_error() == PN_ESOCKET) {
+#ifdef _WIN32
+                if (pn::get_last_socket_error() != WSAENOTSOCK) {
+#else
+                if (pn::get_last_socket_error() != EBADF) {
+#endif
+                    ERR_NET;
+                }
+            } else {
+                ERR_NET;
+            }
             b.close();
             a.close();
             break;
@@ -256,7 +267,17 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b) {
 
         ssize_t c;
         if ((c = b.send(buf, read_result)) == PN_ERROR) {
-            ERR_NET;
+            if (pn::get_last_error() == PN_ESOCKET) {
+#ifdef _WIN32
+                if (pn::get_last_socket_error() != WSAENOTSOCK) {
+#else
+                if (pn::get_last_socket_error() != EBADF) {
+#endif
+                    ERR_NET;
+                }
+            } else {
+                ERR_NET;
+            }
             a.close();
             b.close();
             break;
