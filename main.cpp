@@ -1,16 +1,31 @@
 #include "Polynet/polynet.hpp"
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
-#define INFO(msg) std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                            << "INFO: " << msg << std::endl;
-#define ERR(msg) std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                           << "Error: " << msg << std::endl
-#define ERR_NET std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                          << "Network error: " << pn::universal_strerror() << std::endl
-#define ERR_CLI(msg) std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                               << "CLI error: " << msg << std::endl
+#define INFO(msg)                                           \
+    print_lock.lock();                                      \
+    std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " \
+              << "Info: " << msg << std::endl;              \
+    print_lock.unlock()
+#define ERR(msg)                                            \
+    print_lock.lock();                                      \
+    std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
+              << "Error: " << msg << std::endl;             \
+    print_lock.unlock()
+#define ERR_NET                                                              \
+    print_lock.lock();                                                       \
+    std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "                  \
+              << "Network error: " << pn::universal_strerror() << std::endl; \
+    print_lock.unlock()
+#define ERR_CLI(msg)                                        \
+    print_lock.lock();                                      \
+    std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
+              << "CLI error: " << msg << std::endl;         \
+    print_lock.unlock()
+
+std::mutex print_lock;
 
 size_t send_all(pn::tcp::Connection& conn, const char* buf, size_t len) {
     auto buf_pos = (const char*) buf;
