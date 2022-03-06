@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "Networking brought to you by:" << std::endl;
+    std::cout << "Cross-platform networking brought to you by:" << std::endl;
     pn::init(true);
 
     pn::tcp::Server server;
@@ -220,6 +220,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    INFO("Proxy server listening on port " << argv[1]);
     if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
             std::thread(init_conn, std::move(conn)).detach();
             return true;
