@@ -3,7 +3,6 @@
 #include <csignal>
 #include <cstring>
 #include <mutex>
-#include <netinet/in.h>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -240,9 +239,9 @@ public:
     }
 };
 
-void route(pn::tcp::Connection a, pn::tcp::Connection b, bool is_normal = true) {
+void route(pn::tcp::Connection a, pn::tcp::Connection b) {
     char buf[UINT16_MAX];
-    while (true) {
+    while (a.is_valid() && b.is_valid()) {
         ssize_t read_result;
         if ((read_result = a.recv(buf, sizeof(buf))) == 0) {
             INFO("Connection closed");
@@ -264,10 +263,6 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b, bool is_normal = true) 
             b.close();
             a.close();
             break;
-        }
-
-        if (!is_normal) {
-            INFO("abnormality");
         }
 
         if (b.send(buf, read_result) == PN_ERROR) {
@@ -333,8 +328,8 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         INFO("Routing connection to " << split_target[0] << ":" << split_target[1]);
-        std::thread(route, conn, proxy, true).detach();
-        std::thread(route, proxy, conn, true).detach();
+        std::thread(route, conn, proxy).detach();
+        std::thread(route, proxy, conn).detach();
         conn.release();
         proxy.release();
         return;
@@ -377,7 +372,7 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         builder.method = std::move(parser.method);
-        builder.http_version = std::move(parser.http_version);
+        builder.http_version = "HTTP/1.1";
         builder.body = std::move(parser.body);
 
         for (const auto& header : parser.headers) {
@@ -389,6 +384,7 @@ void init_conn(pn::tcp::Connection conn) {
             builder.headers.insert(header);
         }
         builder.headers["Host"] = std::move(host);
+        builder.headers["Connection"] = "close";
 
         pn::tcp::Client proxy;
         if (proxy.connect(split_host[0], split_host[1]) == PN_ERROR) {
@@ -401,9 +397,7 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         auto new_request = std::move(builder.build());
-        INFO("REQ SIZE: " << new_request.size());
-        ssize_t thing;
-        if ((thing = proxy.send(new_request.data(), new_request.size())) == PN_ERROR) {
+        if (proxy.send(new_request.data(), new_request.size()) == PN_ERROR) {
             ERR_NET;
             char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -411,11 +405,10 @@ void init_conn(pn::tcp::Connection conn) {
             }
             return;
         }
-        INFO("AMOUNT SENT SIZE: " << new_request.size());
 
         INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
-        route(proxy, conn);
-        INFO("Done routing HTTP request");
+        route(std::move(proxy), std::move(conn));
+        INFO("Finished routing HTTP request");
         return;
     }
 }
@@ -442,6 +435,12 @@ int main(int argc, char** argv) {
         ERR_NET;
         return 1;
     }
+#ifdef __linux__
+    if (server.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (const char*) &value, sizeof(int)) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+#endif
 
     INFO("Proxy server listening on port " << argv[1]);
     if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
