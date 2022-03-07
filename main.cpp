@@ -3,6 +3,7 @@
 #include <csignal>
 #include <cstring>
 #include <mutex>
+#include <netinet/in.h>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -431,11 +432,11 @@ int main(int argc, char** argv) {
     }
 
     const int value = 1;
-    if (server.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*) &value, sizeof(value)) == PN_ERROR) {
+    if (server.setsockopt(IPPROTO_TCP, TCP_NODELAY, (const char*) &value, sizeof(int)) == PN_ERROR) {
         ERR_NET;
         return 1;
     }
-    if (server.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (char*) &value, sizeof(value)) == PN_ERROR) {
+    if (server.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (const char*) &value, sizeof(int)) == PN_ERROR) {
         ERR_NET;
         return 1;
     }
