@@ -1,8 +1,5 @@
 #include "Polynet/polynet.hpp"
-#include <asm-generic/errno.h>
 #include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 #include <csignal>
 #include <cstring>
 #include <mutex>
