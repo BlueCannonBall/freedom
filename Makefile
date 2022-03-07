@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -s -O2 -pthread
+CXXFLAGS = -s -O2 -pthread -std=c++11
 TARGET = freedom
 PREFIX = /usr/local
 
