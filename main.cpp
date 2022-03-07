@@ -240,9 +240,9 @@ public:
     }
 };
 
-void route(pn::tcp::Connection a, pn::tcp::Connection b) {
+void route(pn::tcp::Connection a, pn::tcp::Connection b, bool is_normal = true) {
     char buf[UINT16_MAX];
-    while (a.is_valid() && b.is_valid()) {
+    while (true) {
         ssize_t read_result;
         if ((read_result = a.recv(buf, sizeof(buf))) == 0) {
             INFO("Connection closed");
@@ -266,8 +266,11 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b) {
             break;
         }
 
-        ssize_t c;
-        if ((c = b.send(buf, read_result)) == PN_ERROR) {
+        if (!is_normal) {
+            INFO("abnormality");
+        }
+
+        if (b.send(buf, read_result) == PN_ERROR) {
             if (pn::get_last_error() == PN_ESOCKET) {
 #ifdef _WIN32
                 if (pn::get_last_socket_error() != WSAENOTSOCK) {
@@ -330,8 +333,8 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         INFO("Routing connection to " << split_target[0] << ":" << split_target[1]);
-        std::thread(route, conn, proxy).detach();
-        std::thread(route, proxy, conn).detach();
+        std::thread(route, conn, proxy, true).detach();
+        std::thread(route, proxy, conn, true).detach();
         conn.release();
         proxy.release();
         return;
@@ -397,8 +400,10 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        auto new_request = builder.build();
-        if (proxy.send(new_request.data(), new_request.size()) == PN_ERROR) {
+        auto new_request = std::move(builder.build());
+        INFO("REQ SIZE: " << new_request.size());
+        ssize_t thing;
+        if ((thing = proxy.send(new_request.data(), new_request.size())) == PN_ERROR) {
             ERR_NET;
             char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -406,10 +411,11 @@ void init_conn(pn::tcp::Connection conn) {
             }
             return;
         }
+        INFO("AMOUNT SENT SIZE: " << new_request.size());
 
         INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
-        conn.shutdown(PN_SD_RECEIVE);
-        std::thread(route, std::move(proxy), std::move(conn)).detach();
+        route(proxy, conn);
+        INFO("Done routing HTTP request");
         return;
     }
 }
