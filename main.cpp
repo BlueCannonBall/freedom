@@ -436,10 +436,6 @@ int main(int argc, char** argv) {
         ERR_NET;
         return 1;
     }
-    if (server.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (const char*) &value, sizeof(int)) == PN_ERROR) {
-        ERR_NET;
-        return 1;
-    }
 
     INFO("Proxy server listening on port " << argv[1]);
     if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
