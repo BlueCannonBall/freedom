@@ -430,6 +430,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    const int value = 1;
+    if (server.setsockopt(IPPROTO_TCP, TCP_NODELAY, (char*) &value, sizeof(value)) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+    if (server.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (char*) &value, sizeof(value)) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+
     INFO("Proxy server listening on port " << argv[1]);
     if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
             std::thread(init_conn, std::move(conn)).detach();
