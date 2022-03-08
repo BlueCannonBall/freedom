@@ -366,11 +366,12 @@ void init_conn(pn::tcp::Connection conn) {
         request.headers["Host"] = std::move(host);
         bool is_websocket_connection = false;
         if (request.headers.find("Connection") != request.headers.end()) {
-            if (boost::to_lower_copy(request.headers["Connection"]) == "upgrade") {
+            if (request.method == "GET" && boost::to_lower_copy(request.headers["Connection"]) == "upgrade") {
                 is_websocket_connection = true;
-            } else {
-                request.headers["Connection"] = "close";
             }
+        }
+        if (!is_websocket_connection) {
+            request.headers["Connection"] = "close";
         }
 
         std::vector<char> proxied_request_data = request.build();
