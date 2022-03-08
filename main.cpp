@@ -360,8 +360,7 @@ void init_conn(pn::tcp::Connection conn) {
 
         request.http_version = "HTTP/1.1";
         for (auto it = request.headers.cbegin(); it != request.headers.cend();) {
-            auto lowercase_header = boost::to_lower_copy((*it).first);
-            if (boost::starts_with(lowercase_header, "proxy-")) {
+            if (boost::starts_with(boost::to_lower_copy((*it).first), "proxy-")) {
                 request.headers.erase(it++);
             } else {
                 ++it;
