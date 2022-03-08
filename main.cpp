@@ -41,8 +41,7 @@ struct case_insensitive_comparer {
 
 struct case_insensitive_hasher {
     size_t operator()(const std::string& key) const {
-        std::string key_copy(key);
-        boost::to_lower(key_copy);
+        std::string key_copy = boost::to_lower_copy(key);
         return std::hash<std::string>()(key_copy);
     }
 };
@@ -380,7 +379,7 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        std::vector<char> proxied_request_data = std::move(request.build());
+        std::vector<char> proxied_request_data = request.build();
         if (proxy.send(proxied_request_data.data(), proxied_request_data.size()) == PN_ERROR) {
             ERR_NET;
             char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
