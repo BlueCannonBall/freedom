@@ -175,7 +175,7 @@ public:
             {
                 std::string string_header_name = std::string(header_name.begin(), header_name.end());
                 std::string string_header_value = std::string(header_value.begin(), header_value.end());
-                this->headers[string_header_name] = string_header_value;
+                this->headers[std::move(string_header_name)] = std::move(string_header_value);
             }
 
             char end_check_buf[2];
@@ -236,40 +236,26 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b) {
         ssize_t read_result;
         if ((read_result = a.recv(buf, sizeof(buf))) == 0) {
             INFO("Connection closed");
-            b.close();
-            a.close();
             break;
         } else if (read_result == PN_ERROR) {
-            if (pn::get_last_error() == PN_ESOCKET) {
 #ifdef _WIN32
-                if (pn::get_last_socket_error() != WSAENOTSOCK) {
+            if (pn::get_last_socket_error() != WSAENOTSOCK) {
 #else
-                if (pn::get_last_socket_error() != EBADF) {
+            if (pn::get_last_socket_error() != EBADF) {
 #endif
-                    ERR_NET;
-                }
-            } else {
                 ERR_NET;
             }
-            b.close();
-            a.close();
             break;
         }
 
         if (b.send(buf, read_result) == PN_ERROR) {
-            if (pn::get_last_error() == PN_ESOCKET) {
 #ifdef _WIN32
-                if (pn::get_last_socket_error() != WSAENOTSOCK) {
+            if (pn::get_last_socket_error() != WSAENOTSOCK) {
 #else
-                if (pn::get_last_socket_error() != EBADF) {
+            if (pn::get_last_socket_error() != EBADF) {
 #endif
-                    ERR_NET;
-                }
-            } else {
                 ERR_NET;
             }
-            a.close();
-            b.close();
             break;
         }
     }
@@ -317,7 +303,7 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        INFO("Routing connection to " << split_target[0] << ":" << split_target[1]);
+        INFO("Routing connection to " << std::move(split_target[0]) << ":" << std::move(split_target[1]));
         std::thread(route, conn, proxy).detach();
         std::thread(route, proxy, conn).detach();
         conn.release();
@@ -398,11 +384,10 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         if (!is_websocket_connection) {
-            INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
+            INFO("Routing HTTP request to " << std::move(split_host[0]) << ":" << std::move(split_host[1]));
             route(std::move(proxy), std::move(conn));
-            INFO("Finished routing HTTP request");
         } else {
-            INFO("Routing WebSocket connection to " << split_host[0] << ":" << split_host[1]);
+            INFO("Routing WebSocket connection to " << std::move(split_host[0]) << ":" << std::move(split_host[1]));
             std::thread(route, conn, proxy).detach();
             std::thread(route, proxy, conn).detach();
             conn.release();
