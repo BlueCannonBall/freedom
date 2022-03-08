@@ -162,6 +162,7 @@ public:
             }
 
             auto header_value = read_until(stream, "\r\n");
+            boost::trim_left(header_value);
             if (header_value.size() == 0) {
                 ERR("HTTP request header value terminated unexpectedly");
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
@@ -360,14 +361,12 @@ void init_conn(pn::tcp::Connection conn) {
         request.http_version = "HTTP/1.1";
         for (auto it = request.headers.cbegin(); it != request.headers.cend();) {
             auto lowercase_header = boost::to_lower_copy((*it).first);
-            if (lowercase_header == "host" || boost::starts_with(lowercase_header, "proxy-")) {
+            if (boost::starts_with(lowercase_header, "proxy-")) {
                 request.headers.erase(it++);
             } else {
                 ++it;
             }
         }
-        request.headers["Host"] = std::move(host);
-        request.headers["Connection"] = "close";
 
         pn::tcp::Client proxy;
         if (proxy.connect(split_host[0], split_host[1]) == PN_ERROR) {
@@ -377,6 +376,16 @@ void init_conn(pn::tcp::Connection conn) {
                 ERR_NET;
             }
             return;
+        }
+
+        request.headers["Host"] = std::move(host);
+        bool is_websocket_connection = false;
+        if (request.headers.find("Connection") != request.headers.end()) {
+            if (boost::to_lower_copy(request.headers["Connection"]) == "upgrade") {
+                is_websocket_connection = true;
+            } else {
+                request.headers["Connection"] = "close";
+            }
         }
 
         std::vector<char> proxied_request_data = request.build();
@@ -389,9 +398,17 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
-        route(std::move(proxy), std::move(conn));
-        INFO("Finished routing HTTP request");
+        if (!is_websocket_connection) {
+            INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
+            route(std::move(proxy), std::move(conn));
+            INFO("Finished routing HTTP request");
+        } else {
+            INFO("Routing WebSocket connection to " << split_host[0] << ":" << split_host[1]);
+            std::thread(route, conn, proxy).detach();
+            std::thread(route, proxy, conn).detach();
+            conn.release();
+            proxy.release();
+        }
     }
 }
 
