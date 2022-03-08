@@ -303,7 +303,7 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        INFO("Routing connection to " << std::move(split_target[0]) << ":" << std::move(split_target[1]));
+        INFO("Routing connection to " << split_target[0] << ":" << split_target[1]);
         std::thread(route, conn, proxy).detach();
         std::thread(route, proxy, conn).detach();
         conn.release();
@@ -344,15 +344,6 @@ void init_conn(pn::tcp::Connection conn) {
             split_host.push_back("80");
         }
 
-        request.http_version = "HTTP/1.1";
-        for (auto it = request.headers.cbegin(); it != request.headers.cend();) {
-            if (boost::starts_with(boost::to_lower_copy((*it).first), "proxy-")) {
-                request.headers.erase(it++);
-            } else {
-                ++it;
-            }
-        }
-
         pn::tcp::Client proxy;
         if (proxy.connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
@@ -361,6 +352,15 @@ void init_conn(pn::tcp::Connection conn) {
                 ERR_NET;
             }
             return;
+        }
+
+        request.http_version = "HTTP/1.1";
+        for (auto it = request.headers.cbegin(); it != request.headers.cend();) {
+            if (boost::starts_with(boost::to_lower_copy((*it).first), "proxy-")) {
+                request.headers.erase(it++);
+            } else {
+                ++it;
+            }
         }
 
         request.headers["Host"] = std::move(host);
@@ -385,10 +385,10 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         if (!is_websocket_connection) {
-            INFO("Routing HTTP request to " << std::move(split_host[0]) << ":" << std::move(split_host[1]));
+            INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
             route(std::move(proxy), std::move(conn));
         } else {
-            INFO("Routing WebSocket connection to " << std::move(split_host[0]) << ":" << std::move(split_host[1]));
+            INFO("Routing WebSocket connection to " << split_host[0] << ":" << split_host[1]);
             std::thread(route, conn, proxy).detach();
             std::thread(route, proxy, conn).detach();
             conn.release();
