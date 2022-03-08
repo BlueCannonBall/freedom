@@ -85,13 +85,36 @@ std::vector<char> read_until(T& conn, const std::string& end_sequence) {
     return buf;
 }
 
-class HTTPRequestParser {
+class HTTPRequest {
 public:
     std::string method;
     std::string target;
     std::string http_version;
     HTTPHeaders headers;
     std::vector<char> body;
+
+    std::vector<char> build() {
+        std::vector<char> ret;
+
+        ret.insert(ret.end(), this->method.begin(), this->method.end());
+        ret.push_back(' ');
+        ret.insert(ret.end(), this->target.begin(), this->target.end());
+        ret.push_back(' ');
+        ret.insert(ret.end(), this->http_version.begin(), this->http_version.end());
+        ret.insert(ret.end(), {'\r', '\n'});
+
+        for (const auto& header : this->headers) {
+            ret.insert(ret.end(), header.first.begin(), header.first.end());
+            ret.insert(ret.end(), {':', ' '});
+            ret.insert(ret.end(), header.second.begin(), header.second.end());
+            ret.insert(ret.end(), {'\r', '\n'});
+        }
+
+        ret.insert(ret.end(), {'\r', '\n'});
+        ret.insert(ret.end(), this->body.begin(), this->body.end());
+
+        return ret;
+    }
 
     template <typename T>
     int parse(T& stream) {
@@ -207,38 +230,6 @@ public:
     }
 };
 
-class HTTPRequestBuilder {
-public:
-    std::string method;
-    std::string target;
-    std::string http_version;
-    HTTPHeaders headers;
-    std::vector<char> body;
-
-    std::vector<char> build() {
-        std::vector<char> ret;
-
-        ret.insert(ret.end(), this->method.begin(), this->method.end());
-        ret.push_back(' ');
-        ret.insert(ret.end(), this->target.begin(), this->target.end());
-        ret.push_back(' ');
-        ret.insert(ret.end(), this->http_version.begin(), this->http_version.end());
-        ret.insert(ret.end(), {'\r', '\n'});
-
-        for (const auto& header : this->headers) {
-            ret.insert(ret.end(), header.first.begin(), header.first.end());
-            ret.insert(ret.end(), {':', ' '});
-            ret.insert(ret.end(), header.second.begin(), header.second.end());
-            ret.insert(ret.end(), {'\r', '\n'});
-        }
-
-        ret.insert(ret.end(), {'\r', '\n'});
-        ret.insert(ret.end(), this->body.begin(), this->body.end());
-
-        return ret;
-    }
-};
-
 void route(pn::tcp::Connection a, pn::tcp::Connection b) {
     char buf[UINT16_MAX];
     while (a.is_valid() && b.is_valid()) {
@@ -285,20 +276,19 @@ void route(pn::tcp::Connection a, pn::tcp::Connection b) {
 }
 
 void init_conn(pn::tcp::Connection conn) {
-    HTTPRequestParser parser;
-    if (parser.parse(conn) != 0) {
-        ERR("Failed to parse HTTP request");
+    HTTPRequest request;
+    if (request.parse(conn) != 0) {
         return;
     }
 
-    if (parser.method == "CONNECT") {
-        if (boost::starts_with(parser.target, "http://") || boost::starts_with(parser.target, "https://")) {
+    if (request.method == "CONNECT") {
+        if (boost::starts_with(request.target, "http://") || boost::starts_with(request.target, "https://")) {
             ERR("Client attempted use absolute path in HTTP CONNECT request");
             return;
         }
 
         std::vector<std::string> split_target;
-        boost::split(split_target, parser.target, boost::is_any_of(":"));
+        boost::split(split_target, std::move(request.target), boost::is_any_of(":"));
 
         if (split_target.size() > 2) {
             ERR("Failed to parse target of CONNECT request");
@@ -332,12 +322,11 @@ void init_conn(pn::tcp::Connection conn) {
         std::thread(route, proxy, conn).detach();
         conn.release();
         proxy.release();
-        return;
     } else {
-        if (boost::starts_with(parser.target, "https://")) {
+        if (boost::starts_with(request.target, "https://")) {
             ERR("Client attempted to use HTTPS in absolute path request");
             return;
-        } else if (!boost::starts_with(parser.target, "http://")) {
+        } else if (!boost::starts_with(request.target, "http://")) {
             ERR("Client attempted to make regular HTTP request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -346,14 +335,12 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        HTTPRequestBuilder builder;
-
-        std::string host(parser.target.size() - 7, ' ');
-        strcpy(&host[0], parser.target.data() + 7);
+        std::string host(request.target.size() - 7, ' ');
+        strcpy(&host[0], request.target.data() + 7);
         std::string::size_type pos;
         if ((pos = host.find('/')) != std::string::npos) {
-            builder.target.resize(host.size() - pos);
-            strcpy(&builder.target[0], &host[pos]);
+            request.target.resize(host.size() - pos);
+            strcpy(&request.target[0], &host[pos]);
             host.resize(pos);
         }
 
@@ -371,20 +358,17 @@ void init_conn(pn::tcp::Connection conn) {
             split_host.push_back("80");
         }
 
-        builder.method = std::move(parser.method);
-        builder.http_version = "HTTP/1.1";
-        builder.body = std::move(parser.body);
-
-        for (const auto& header : parser.headers) {
-            auto lowercase_header = boost::to_lower_copy(header.first);
+        request.http_version = "HTTP/1.1";
+        for (auto it = request.headers.cbegin(); it != request.headers.cend();) {
+            auto lowercase_header = boost::to_lower_copy((*it).first);
             if (lowercase_header == "host" || boost::starts_with(lowercase_header, "proxy-")) {
-                continue;
+                request.headers.erase(it++);
+            } else {
+                ++it;
             }
-
-            builder.headers.insert(header);
         }
-        builder.headers["Host"] = std::move(host);
-        builder.headers["Connection"] = "close";
+        request.headers["Host"] = std::move(host);
+        request.headers["Connection"] = "close";
 
         pn::tcp::Client proxy;
         if (proxy.connect(split_host[0], split_host[1]) == PN_ERROR) {
@@ -396,8 +380,8 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        auto new_request = std::move(builder.build());
-        if (proxy.send(new_request.data(), new_request.size()) == PN_ERROR) {
+        std::vector<char> proxied_request_data = std::move(request.build());
+        if (proxy.send(proxied_request_data.data(), proxied_request_data.size()) == PN_ERROR) {
             ERR_NET;
             char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -409,7 +393,6 @@ void init_conn(pn::tcp::Connection conn) {
         INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
         route(std::move(proxy), std::move(conn));
         INFO("Finished routing HTTP request");
-        return;
     }
 }
 
