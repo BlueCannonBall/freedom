@@ -66,7 +66,7 @@ std::vector<char> read_until(T& conn, const std::string& end_sequence) {
         }
 
         if (c == end_sequence[search_pos]) {
-            if (++search_pos == end_sequence.length()) {
+            if (++search_pos == end_sequence.size()) {
                 break;
             }
         } else {
@@ -74,7 +74,7 @@ std::vector<char> read_until(T& conn, const std::string& end_sequence) {
             search_pos = 0;
 
             if (c == end_sequence[search_pos]) {
-                if (++search_pos == end_sequence.length()) {
+                if (++search_pos == end_sequence.size()) {
                     break;
                 }
             }
@@ -309,11 +309,13 @@ void init_conn(pn::tcp::Connection conn) {
         conn.release();
         proxy.release();
     } else {
-        if (boost::starts_with(request.target, "https://")) {
-            ERR("Client attempted to use HTTPS in absolute path request");
-            return;
-        } else if (!boost::starts_with(request.target, "http://")) {
-            ERR("Client attempted to make regular HTTP request");
+        size_t protocol_len;
+        if (boost::starts_with(request.target, "http://")) {
+            protocol_len = 7;
+        } else if (boost::starts_with(request.target, "ws://")) {
+            protocol_len = 5;
+        } else {
+            ERR("Client (possibly) attempted to make regular HTTP request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                 ERR_NET;
@@ -321,8 +323,8 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
-        std::string host(request.target.size() - 7, ' ');
-        strcpy(&host[0], request.target.data() + 7);
+        std::string host(request.target.size() - protocol_len, ' ');
+        strcpy(&host[0], request.target.data() + protocol_len);
         std::string::size_type pos;
         if ((pos = host.find('/')) != std::string::npos) {
             request.target.resize(host.size() - pos);
