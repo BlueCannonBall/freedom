@@ -1,5 +1,5 @@
 CXX = g++
-override CXXFLAGS += -Wall -s -O2 -pthread -std=c++14
+override CXXFLAGS += -Wall -s -O3 -flto -pthread -std=c++14
 TARGET = freedom
 PREFIX = /usr/local
 
