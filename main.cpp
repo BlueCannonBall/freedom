@@ -367,8 +367,11 @@ void init_conn(pn::tcp::Connection conn) {
 
         request.headers["Host"] = std::move(host);
         bool is_websocket_connection = false;
-        if (request.headers.find("Connection") != request.headers.end()) {
-            if (request.method == "GET" && boost::to_lower_copy(request.headers["Connection"]) == "upgrade") {
+        if (request.headers.find("Connection") != request.headers.end() &&
+            request.headers.find("Upgrade") != request.headers.end()) {
+            if (request.method == "GET" &&
+                boost::to_lower_copy(request.headers["Connection"]) == "upgrade" &&
+                boost::to_lower_copy(request.headers["Upgrade"]) == "websocket") {
                 is_websocket_connection = true;
             }
         }
