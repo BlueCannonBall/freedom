@@ -356,6 +356,7 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
+        std::string original_http_version = request.http_version;
         request.http_version = "HTTP/1.1";
         for (auto it = request.headers.cbegin(); it != request.headers.cend();) {
             if (boost::starts_with(boost::to_lower_copy((*it).first), "proxy-")) {
@@ -366,11 +367,12 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         request.headers["Host"] = std::move(host);
-        bool is_websocket_connection = false;
-        if (request.headers.find("Connection") != request.headers.end() &&
-            request.headers.find("Upgrade") != request.headers.end()) {
-            if (request.method == "GET" &&
-                boost::to_lower_copy(request.headers["Connection"]) == "upgrade" &&
+        bool is_websocket_connection = false; // Other upgrades are NOT SUPPORTED
+        if (original_http_version == "HTTP/1.1" &&
+            request.method == "GET" &&
+            request.headers.find("Upgrade") != request.headers.end() &&
+            request.headers.find("Connection") != request.headers.end()) {
+            if (boost::to_lower_copy(request.headers["Connection"]) == "upgrade" &&
                 boost::to_lower_copy(request.headers["Upgrade"]) == "websocket") {
                 is_websocket_connection = true;
             }
