@@ -389,13 +389,11 @@ void init_conn(pn::tcp::Connection conn) {
         if (original_http_version == "HTTP/1.1" &&
             request.method == "GET" &&
             request.headers.find("Upgrade") != request.headers.end() &&
-            request.headers.find("Connection") != request.headers.end()) {
-            if (boost::to_lower_copy(request.headers["Connection"]) == "upgrade" &&
-                boost::to_lower_copy(request.headers["Upgrade"]) == "websocket") {
-                is_websocket_connection = true;
-            }
-        }
-        if (!is_websocket_connection) {
+            request.headers.find("Connection") != request.headers.end() &&
+            boost::to_lower_copy(request.headers["Connection"]) == "upgrade" &&
+            boost::to_lower_copy(request.headers["Upgrade"]) == "websocket") {
+            is_websocket_connection = true;
+        } else {
             request.headers["Connection"] = "close";
         }
 
