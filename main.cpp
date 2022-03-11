@@ -55,7 +55,7 @@ std::vector<char> read_until(T& conn, const std::string& end_sequence) {
     std::vector<char> buf;
 
     size_t search_pos = 0;
-    while (true) {
+    for (;;) {
         char c;
         ssize_t read_result;
         if ((read_result = conn.recv(&c, sizeof(c), MSG_WAITALL)) == 0) {
@@ -150,7 +150,7 @@ public:
         }
         this->http_version = std::string(http_version.begin(), http_version.end());
 
-        while (true) {
+        for (;;) {
             auto header_name = read_until(stream, ": ");
             if (header_name.size() == 0) {
                 ERR("HTTP request header name terminated unexpectedly");
@@ -180,7 +180,24 @@ public:
 
             char end_check_buf[2];
             ssize_t read_result;
-            if ((read_result = stream.recv(end_check_buf, sizeof(end_check_buf), MSG_WAITALL | MSG_PEEK)) == 0) {
+#ifdef _WIN32
+            for (;;) {
+                if ((read_result = stream.recv(end_check_buf, sizeof(end_check_buf), MSG_PEEK)) == 0) {
+                    ERR("Connection unexpectedly closed");
+                    return 1;
+                } else if (read_result == PN_ERROR) {
+                    ERR_NET;
+                    char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
+                    if (stream.send(response, sizeof(response) - 1) == PN_ERROR) {
+                        ERR_NET;
+                    }
+                    return 1;
+                } else if (read_result == sizeof(end_check_buf)) {
+                    break;
+                }
+            }
+#else
+            if ((read_result = stream.recv(end_check_buf, sizeof(end_check_buf), MSG_PEEK | MSG_WAITALL)) == 0) {
                 ERR("Connection unexpectedly closed");
                 return 1;
             } else if (read_result == PN_ERROR) {
@@ -191,6 +208,7 @@ public:
                 }
                 return 1;
             }
+#endif
 
             if (memcmp("\r\n", end_check_buf, sizeof(end_check_buf)) == 0) {
                 if ((read_result = stream.recv(end_check_buf, sizeof(end_check_buf), MSG_WAITALL)) == 0) {
@@ -405,7 +423,9 @@ void init_conn(pn::tcp::Connection conn) {
 }
 
 int main(int argc, char** argv) {
+#ifndef _WIN32
     signal(SIGPIPE, SIG_IGN);
+#endif
 
     if (argc < 2) {
         ERR_CLI("Missing arguments");
