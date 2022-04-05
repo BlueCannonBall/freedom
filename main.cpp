@@ -515,6 +515,5 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    pn::quit();
-    return 0;
+    return pn::quit();
 }
