@@ -476,6 +476,7 @@ int main(int argc, char** argv) {
 
     if (argc < 2) {
         ERR_CLI("Missing arguments");
+        std::cout << "Usage: " << argv[0] << " <PORT> [PASSWORD]\n";
         return 1;
     }
 
@@ -483,7 +484,7 @@ int main(int argc, char** argv) {
         password = argv[2];
     }
 
-    std::cout << "Cross-platform networking brought to you by:" << std::endl;
+    std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
 
     pn::tcp::Server server;
