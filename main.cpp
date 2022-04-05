@@ -1,5 +1,8 @@
 #include "Polynet/polynet.hpp"
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
 #include <csignal>
 #include <cstring>
 #include <mutex>
@@ -49,6 +52,15 @@ struct case_insensitive_hasher {
 typedef std::unordered_map<std::string, std::string, case_insensitive_hasher, case_insensitive_comparer> HTTPHeaders;
 
 std::mutex print_lock;
+std::string password;
+
+std::string decode64(const std::string& s) {
+    using namespace boost::archive::iterators;
+    using It = transform_width<binary_from_base64<std::string::const_iterator>, 8, 6>;
+    return boost::algorithm::trim_right_copy_if(std::string(It(std::begin(s)), It(std::end(s))), [](char c) {
+        return c == '\0';
+    });
+}
 
 template <typename T>
 std::vector<char> read_until(T& conn, const std::string& end_sequence) {
@@ -118,7 +130,7 @@ public:
     template <typename T>
     int parse(T& stream) {
         auto method = read_until(stream, " ");
-        if (method.size() == 0) {
+        if (method.empty()) {
             ERR("Request method not found in HTTP request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (stream.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -129,7 +141,7 @@ public:
         this->method = std::string(method.begin(), method.end());
 
         auto target = read_until(stream, " ");
-        if (target.size() == 0) {
+        if (target.empty()) {
             ERR("Request target not found in HTTP request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (stream.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -140,7 +152,7 @@ public:
         this->target = std::string(target.begin(), target.end());
 
         auto http_version = read_until(stream, "\r\n");
-        if (http_version.size() == 0) {
+        if (http_version.empty()) {
             ERR("HTTP version not found in HTTP request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (stream.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -152,7 +164,7 @@ public:
 
         for (;;) {
             auto header_name = read_until(stream, ": ");
-            if (header_name.size() == 0) {
+            if (header_name.empty()) {
                 ERR("HTTP request header name terminated unexpectedly");
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
                 if (stream.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -163,7 +175,7 @@ public:
 
             auto header_value = read_until(stream, "\r\n");
             boost::trim_left(header_value);
-            if (header_value.size() == 0) {
+            if (header_value.empty()) {
                 ERR("HTTP request header value terminated unexpectedly");
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
                 if (stream.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -283,6 +295,42 @@ void init_conn(pn::tcp::Connection conn) {
     HTTPRequest request;
     if (request.parse(conn) != 0) {
         return;
+    }
+
+    if (!password.empty()) {
+        if (request.headers.find("Proxy-Authorization") == request.headers.end()) {
+            ERR("Authentication not provided");
+            char response[] = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic\r\n\r\n";
+            if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                ERR_NET;
+            }
+            return;
+        } else {
+            std::vector<std::string> split_auth;
+            boost::split(split_auth, std::move(request.headers["Proxy-Authorization"]), isspace);
+            if (boost::to_lower_copy(split_auth[0]) != "basic") {
+                ERR("Authorization failed: Unsupported authentication schema");
+                char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
+                if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                    ERR_NET;
+                }
+                return;
+            }
+
+            std::string decoded_auth = decode64(split_auth[1]);
+            std::vector<std::string> split_decoded_auth;
+            boost::split(split_decoded_auth, std::move(decoded_auth), boost::is_any_of(":"));
+            if (split_decoded_auth[1] != password) {
+                ERR("Authorization failed: Incorrect password");
+                char response[] = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic\r\n\r\n";
+                if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                    ERR_NET;
+                }
+                return;
+            }
+
+            INFO("User \"" << split_decoded_auth[0] << "\" successfully authorized");
+        }
     }
 
     if (request.method == "CONNECT") {
@@ -429,6 +477,10 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         ERR_CLI("Missing arguments");
         return 1;
+    }
+
+    if (argc >= 3) {
+        password = argv[2];
     }
 
     std::cout << "Cross-platform networking brought to you by:" << std::endl;
