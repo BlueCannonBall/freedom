@@ -309,7 +309,7 @@ void init_conn(pn::tcp::Connection conn) {
             std::vector<std::string> split_auth;
             boost::split(split_auth, std::move(request.headers["Proxy-Authorization"]), isspace);
             if (boost::to_lower_copy(split_auth[0]) != "basic") {
-                ERR("Authorization failed: Unsupported authentication schema");
+                ERR("Authorization failed: Unsupported authentication scheme");
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
                 if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                     ERR_NET;
