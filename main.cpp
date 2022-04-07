@@ -1,8 +1,8 @@
 #include "Polynet/polynet.hpp"
 #include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/classification.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+#include <cctype>
 #include <cstring>
 #include <mutex>
 #include <string>
