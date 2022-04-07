@@ -3,7 +3,6 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
-#include <csignal>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -13,6 +12,7 @@
 #include <vector>
 #ifndef _WIN32
     #include <errno.h>
+    #include <signal.h>
 #endif
 
 #define INFO(msg)                                           \
