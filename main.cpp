@@ -441,7 +441,9 @@ void init_conn(pn::tcp::Connection conn) {
             boost::to_lower_copy(request.headers["Upgrade"]) == "websocket") {
             is_websocket_connection = true;
         } else {
+            // Keep-alive is not supported
             request.headers["Connection"] = "close";
+            conn.shutdown(PN_SD_RECEIVE);
         }
 
         request.http_version = "HTTP/1.1";
