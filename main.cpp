@@ -260,6 +260,26 @@ public:
     }
 };
 
+int configure_socket(pn::Socket& s) {
+    const int value = 1;
+    if (s.setsockopt(IPPROTO_TCP, TCP_NODELAY, (const char*) &value, sizeof(int)) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+#ifdef __linux__
+    if (s.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (const char*) &value, sizeof(int)) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+#endif
+    if (s.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (const char*) &value, sizeof(int)) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+
+    return 0;
+}
+
 void route(pn::tcp::Connection a, pn::tcp::Connection b) {
     char buf[UINT16_MAX];
     while (a.is_valid() && b.is_valid()) {
@@ -363,6 +383,11 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         }
 
+        if (configure_socket(proxy) != 0) {
+            ERR("Failed to configure socket");
+            return;
+        }
+
         char response[] = "HTTP/1.1 200 OK\r\n\r\n";
         if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
             ERR_NET;
@@ -419,6 +444,11 @@ void init_conn(pn::tcp::Connection conn) {
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                 ERR_NET;
             }
+            return;
+        }
+
+        if (configure_socket(proxy) != 0) {
+            ERR("Failed to configure socket");
             return;
         }
 
@@ -495,17 +525,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    const int value = 1;
-    if (server.setsockopt(IPPROTO_TCP, TCP_NODELAY, (const char*) &value, sizeof(int)) == PN_ERROR) {
-        ERR_NET;
+    if (configure_socket(server) != 0) {
+        ERR("Failed to configure server socket");
         return 1;
     }
-#ifdef __linux__
-    if (server.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (const char*) &value, sizeof(int)) == PN_ERROR) {
-        ERR_NET;
-        return 1;
-    }
-#endif
 
     INFO("Proxy server listening on port " << argv[1]);
     if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
