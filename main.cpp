@@ -328,7 +328,7 @@ void init_conn(pn::tcp::Connection conn) {
             return;
         } else {
             std::vector<std::string> split_auth;
-            boost::split(split_auth, std::move(request.headers["Proxy-Authorization"]), isspace);
+            boost::split(split_auth, request.headers["Proxy-Authorization"], isspace);
             if (boost::to_lower_copy(split_auth[0]) != "basic") {
                 ERR("Authorization failed: Unsupported authentication scheme");
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
@@ -340,7 +340,7 @@ void init_conn(pn::tcp::Connection conn) {
 
             std::string decoded_auth = decode64(split_auth[1]);
             std::vector<std::string> split_decoded_auth;
-            boost::split(split_decoded_auth, std::move(decoded_auth), boost::is_any_of(":"));
+            boost::split(split_decoded_auth, decoded_auth, boost::is_any_of(":"));
             if (split_decoded_auth[1] != password) {
                 ERR("Authorization failed: Incorrect password");
                 char response[] = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic\r\n\r\n";
@@ -368,7 +368,7 @@ void init_conn(pn::tcp::Connection conn) {
         }
 
         std::vector<std::string> split_target;
-        boost::split(split_target, std::move(request.target), boost::is_any_of(":"));
+        boost::split(split_target, request.target, boost::is_any_of(":"));
 
         if (split_target.size() > 2) {
             ERR("Failed to parse target of HTTP CONNECT request");
