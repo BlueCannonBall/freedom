@@ -71,6 +71,7 @@ std::vector<char> read_until(T& conn, const std::string& end_sequence) {
         char c;
         ssize_t read_result;
         if ((read_result = conn.recv(&c, sizeof(c), MSG_WAITALL)) == 0) {
+            ERR("Connection unexpectedly closed");
             break;
         } else if (read_result == PN_ERROR) {
             ERR_NET;
@@ -354,8 +355,15 @@ void init_conn(pn::tcp::Connection conn) {
     }
 
     if (request.method == "CONNECT") {
-        if (boost::starts_with(request.target, "http://") || boost::starts_with(request.target, "https://")) {
-            ERR("Client attempted use absolute path in HTTP CONNECT request");
+        if (boost::starts_with(request.target, "http://") ||
+            boost::starts_with(request.target, "https://") ||
+            boost::starts_with(request.target, "ws://") ||
+            boost::starts_with(request.target, "wss://")) {
+            ERR("Client attempted use absolute-form target in HTTP CONNECT request");
+            char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
+            if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                ERR_NET;
+            }
             return;
         }
 
@@ -363,7 +371,7 @@ void init_conn(pn::tcp::Connection conn) {
         boost::split(split_target, std::move(request.target), boost::is_any_of(":"));
 
         if (split_target.size() > 2) {
-            ERR("Failed to parse target of CONNECT request");
+            ERR("Failed to parse target of HTTP CONNECT request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                 ERR_NET;
@@ -376,6 +384,7 @@ void init_conn(pn::tcp::Connection conn) {
         pn::tcp::Client proxy;
         if (proxy.connect(split_target[0], split_target[1]) == PN_ERROR) {
             ERR_NET;
+            ERR("Failed to create proxy connection");
             char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                 ERR_NET;
@@ -385,6 +394,10 @@ void init_conn(pn::tcp::Connection conn) {
 
         if (configure_socket(proxy) != 0) {
             ERR("Failed to configure socket");
+            char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
+            if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                ERR_NET;
+            }
             return;
         }
 
@@ -427,7 +440,7 @@ void init_conn(pn::tcp::Connection conn) {
         boost::split(split_host, host, boost::is_any_of(":"));
 
         if (split_host.size() > 2) {
-            ERR("Failed to parse host of absolute target HTTP request");
+            ERR("Failed to parse host of absolute-form target HTTP request");
             char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                 ERR_NET;
@@ -440,6 +453,7 @@ void init_conn(pn::tcp::Connection conn) {
         pn::tcp::Client proxy;
         if (proxy.connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
+            ERR("Failed to create proxy connection");
             char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
             if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                 ERR_NET;
@@ -449,6 +463,10 @@ void init_conn(pn::tcp::Connection conn) {
 
         if (configure_socket(proxy) != 0) {
             ERR("Failed to configure socket");
+            char response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
+            if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                ERR_NET;
+            }
             return;
         }
 
