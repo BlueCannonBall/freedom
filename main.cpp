@@ -350,7 +350,7 @@ void init_conn(pn::tcp::Connection conn) {
             boost::split(split_decoded_auth, decoded_auth, boost::is_any_of(":"));
             if (split_decoded_auth.size() != 2) {
                 ERR("Authorization failed: Bad username:password combination");
-                char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
+                char response[] = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic\r\n\r\n";
                 if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
                     ERR_NET;
                 }
