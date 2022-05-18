@@ -329,7 +329,14 @@ void init_conn(pn::tcp::Connection conn) {
         } else {
             std::vector<std::string> split_auth;
             boost::split(split_auth, request.headers["Proxy-Authorization"], isspace);
-            if (boost::to_lower_copy(split_auth[0]) != "basic") {
+            if (split_auth.size() < 2) {
+                ERR("Authorization failed: Bad Proxy-Authorization header");
+                char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
+                if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                    ERR_NET;
+                }
+                return;
+            } else if (boost::to_lower_copy(split_auth[0]) != "basic") {
                 ERR("Authorization failed: Unsupported authentication scheme");
                 char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
                 if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
@@ -341,7 +348,14 @@ void init_conn(pn::tcp::Connection conn) {
             std::string decoded_auth = decode64(split_auth[1]);
             std::vector<std::string> split_decoded_auth;
             boost::split(split_decoded_auth, decoded_auth, boost::is_any_of(":"));
-            if (split_decoded_auth[1] != password) {
+            if (split_decoded_auth.size() != 2) {
+                ERR("Authorization failed: Bad username:password combination");
+                char response[] = "HTTP/1.1 400 Bad Request\r\n\r\n";
+                if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
+                    ERR_NET;
+                }
+                return;
+            } else if (split_decoded_auth[1] != password) {
                 ERR("Authorization failed: Incorrect password");
                 char response[] = "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic\r\n\r\n";
                 if (conn.send(response, sizeof(response) - 1) == PN_ERROR) {
