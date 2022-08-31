@@ -34,7 +34,7 @@ $(OBJDIR)/polyweb.o: Polyweb/polyweb.cpp Polyweb/Polynet/polynet.hpp Polyweb/pol
 .PHONY: clean install
 
 clean:
-	$(RM) $(TARGET)
+	rm -rf $(TARGET) $(OBJDIR)
 
 install:
 	cp $(TARGET) $(PREFIX)/bin/$(TARGET)
