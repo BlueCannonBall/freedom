@@ -1,20 +1,13 @@
 #include "Polyweb/Polynet/polynet.hpp"
 #include "Polyweb/polyweb.hpp"
 #include <boost/algorithm/string.hpp>
-#include <boost/archive/iterators/binary_from_base64.hpp>
-#include <boost/archive/iterators/transform_width.hpp>
 #include <cctype>
 #include <cstring>
+#include <iomanip>
 #include <mutex>
 #include <string>
-#include <thread>
-#include <unordered_map>
 #include <utility>
 #include <vector>
-#ifndef _WIN32
-    #include <errno.h>
-    #include <signal.h>
-#endif
 
 #define INFO(msg)                                               \
     do {                                                        \
@@ -150,7 +143,7 @@ void init_conn(pw::Connection conn) {
                     return;
                 }
 
-                INFO("User \"" << split_decoded_auth[0] << "\" successfully authorized");
+                INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
             }
         }
     }
