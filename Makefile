@@ -5,7 +5,7 @@ else
 endif
 
 CXX = g++
-override CXXFLAGS += -Wall -O3 -flto -pthread -std=c++14
+CXXFLAGS = -Wall -O3 -flto -pthread -std=c++14
 HEADERS = $(shell find . -name "*.hpp")
 OBJDIR = obj
 OBJS = $(OBJDIR)/main.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o
@@ -13,6 +13,7 @@ TARGET = freedom
 PREFIX = /usr/local
 
 ifeq ($(WINDOWS),1)
+	CXXFLAGS += -static -static-libgcc -static-libstdc++
 	LIBS += -lws2_32
 endif
 
