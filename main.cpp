@@ -325,8 +325,7 @@ int main(int argc, char** argv) {
                 init_conn(std::move(conn));
             });
             return true;
-        },
-            128) == PW_ERROR) {
+        }) == PW_ERROR) {
         ERR_NET;
         return 1;
     }
