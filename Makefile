@@ -6,6 +6,7 @@ endif
 
 CXX = g++
 CXXFLAGS = -Wall -O3 -flto -pthread -std=c++14
+LIBS = -lssl -lcrypto
 HEADERS = $(shell find . -name "*.hpp")
 OBJDIR = obj
 OBJS = $(OBJDIR)/main.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o
