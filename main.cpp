@@ -321,9 +321,13 @@ int main(int argc, char** argv) {
 
     INFO("Proxy server listening on port " << argv[1]);
     if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
-            pw::threadpool.schedule([conn = std::move(conn)](void*) {
-                init_conn(std::move(conn));
-            });
+            pw::Connection* web_conn = new pw::Connection(std::move(conn));
+            pw::threadpool.schedule([](void* data) {
+                auto web_conn = (pw::Connection*) data;
+                init_conn(std::move(*web_conn));
+                delete web_conn;
+            },
+                web_conn);
             return true;
         }) == PW_ERROR) {
         ERR_NET;
