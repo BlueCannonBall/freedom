@@ -71,40 +71,33 @@ int configure_socket(pn::Socket& s) {
     return PW_OK;
 }
 
-void route(pn::tcp::Connection a, pn::tcp::Connection b) {
+void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connection> b) {
     char buf[UINT16_MAX];
-    while (a && b) {
+    for (;;) {
         ssize_t read_result;
-        if ((read_result = a.recv(buf, sizeof(buf))) == 0) {
+        if ((read_result = a->recv(buf, sizeof(buf))) == 0) {
             INFO("Connection closed");
             break;
         } else if (read_result == PW_ERROR) {
-#ifdef _WIN32
-            if (pn::get_last_socket_error() != WSAENOTSOCK) {
-#else
-            if (pn::get_last_socket_error() != EBADF) {
-#endif
-                ERR_NET;
-            }
+            ERR_NET;
             break;
         }
 
-        if (b.send(buf, read_result) == PW_ERROR) {
-#ifdef _WIN32
-            if (pn::get_last_socket_error() != WSAENOTSOCK) {
-#else
-            if (pn::get_last_socket_error() != EBADF) {
-#endif
+        pn::SharedSock<pn::tcp::Connection> b_locked;
+        if ((b_locked = b.lock())) {
+            if (b_locked->send(buf, read_result) == PW_ERROR) {
                 ERR_NET;
+                break;
             }
+        } else {
             break;
         }
     }
 }
 
-void init_conn(pw::Connection conn) {
+void init_conn(pn::SharedSock<pw::Connection> conn) {
     pw::HTTPRequest req;
-    if (req.parse(conn) == PW_ERROR) {
+    if (req.parse(*conn) == PW_ERROR) {
         ERR_WEB;
         std::string resp_status_code;
         switch (pw::get_last_error()) {
@@ -118,14 +111,14 @@ void init_conn(pw::Connection conn) {
                 break;
             }
         }
-        conn.send(pw::HTTPResponse::create_basic(resp_status_code));
+        conn->send(pw::HTTPResponse::make_basic(resp_status_code));
         return;
     }
 
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
             ERR("Authentication not provided");
-            if (conn.send(pw::HTTPResponse::create_basic("407", {CONNECTION_CLOSE, {"Proxy-Authenticate", "basic"}}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("407", {CONNECTION_CLOSE, {"Proxy-Authenticate", "basic"}}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         } else {
@@ -133,12 +126,12 @@ void init_conn(pw::Connection conn) {
             boost::split(split_auth, req.headers["Proxy-Authorization"], isspace);
             if (split_auth.size() < 2) {
                 ERR("Authorization failed: Bad Proxy-Authorization header");
-                if (conn.send(pw::HTTPResponse::create_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+                if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                     ERR_WEB;
                 return;
             } else if (boost::to_lower_copy(split_auth[0]) != "basic") {
                 ERR("Authorization failed: Unsupported authentication scheme");
-                if (conn.send(pw::HTTPResponse::create_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+                if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                     ERR_WEB;
                 return;
             } else {
@@ -149,12 +142,12 @@ void init_conn(pw::Connection conn) {
                 boost::split(split_decoded_auth, decoded_auth_string, boost::is_any_of(":"));
                 if (split_decoded_auth.size() != 2) {
                     ERR("Authorization failed: Bad username:password combination");
-                    if (conn.send(pw::HTTPResponse::create_basic("407", {CONNECTION_CLOSE, {"Proxy-Authenticate", "basic"}}, req.http_version)) == PW_ERROR)
+                    if (conn->send(pw::HTTPResponse::make_basic("407", {CONNECTION_CLOSE, {"Proxy-Authenticate", "basic"}}, req.http_version)) == PW_ERROR)
                         ERR_WEB;
                     return;
                 } else if (split_decoded_auth[1] != password) {
                     ERR("Authorization failed: Incorrect password");
-                    if (conn.send(pw::HTTPResponse::create_basic("407", {CONNECTION_CLOSE, {"Proxy-Authenticate", "basic"}}, req.http_version)) == PW_ERROR)
+                    if (conn->send(pw::HTTPResponse::make_basic("407", {CONNECTION_CLOSE, {"Proxy-Authenticate", "basic"}}, req.http_version)) == PW_ERROR)
                         ERR_WEB;
                     return;
                 }
@@ -170,7 +163,7 @@ void init_conn(pw::Connection conn) {
             boost::starts_with(req.target, "ws://") ||
             boost::starts_with(req.target, "wss://")) {
             ERR("Client attempted use absolute-form target in HTTP CONNECT request");
-            if (conn.send(pw::HTTPResponse::create_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
@@ -180,37 +173,37 @@ void init_conn(pw::Connection conn) {
 
         if (split_target.size() > 2) {
             ERR("Failed to parse target of HTTP CONNECT request");
-            if (conn.send(pw::HTTPResponse::create_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         } else if (split_target.size() == 1) {
             split_target.push_back("80");
         }
 
-        pn::tcp::Client proxy;
-        if (proxy.connect(split_target[0], split_target[1]) == PW_ERROR) {
+        auto proxy = pn::make_shared<pn::tcp::Client>();
+        if (proxy->connect(split_target[0], split_target[1]) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn.send(pw::HTTPResponse::create_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
 
-        if (configure_socket(proxy) == PW_ERROR) {
+        if (configure_socket(*proxy) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn.send(pw::HTTPResponse::create_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
 
-        if (conn.send(pw::HTTPResponse("200")) == PW_ERROR) {
+        if (conn->send(pw::HTTPResponse("200")) == PW_ERROR) {
             ERR_WEB;
             return;
         }
 
         INFO("Routing connection to " << split_target[0] << ":" << split_target[1]);
-        pw::threadpool.schedule([conn, proxy](void*) {
+        pw::threadpool.schedule([conn, proxy](void*) mutable {
             route(std::move(conn), std::move(proxy));
         });
         route(std::move(proxy), std::move(conn));
@@ -220,7 +213,7 @@ void init_conn(pw::Connection conn) {
             protocol_len = 7;
         } else {
             ERR("Client (possibly) attempted to make regular HTTP request");
-            if (conn.send(pw::HTTPResponse::create_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
@@ -232,7 +225,7 @@ void init_conn(pw::Connection conn) {
             boost::to_lower_copy(req.headers["Connection"]) == "upgrade" &&
             boost::to_lower_copy(req.headers["Upgrade"]) == "websocket") {
             ERR("Client attempted to make absolute-target WebSocket connection");
-            if (conn.send(pw::HTTPResponse::create_basic("501", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("501", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
@@ -245,26 +238,26 @@ void init_conn(pw::Connection conn) {
 
         if (split_host.size() > 2) {
             ERR("Failed to parse host of absolute-form target HTTP request");
-            if (conn.send(pw::HTTPResponse::create_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         } else if (split_host.size() == 1) {
             split_host.push_back("80");
         }
 
-        pn::tcp::Client proxy;
-        if (proxy.connect(split_host[0], split_host[1]) == PW_ERROR) {
+        auto proxy = pn::make_shared<pn::tcp::Client>();
+        if (proxy->connect(split_host[0], split_host[1]) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn.send(pw::HTTPResponse::create_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
 
-        if (configure_socket(proxy) == PW_ERROR) {
+        if (configure_socket(*proxy) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn.send(pw::HTTPResponse::create_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
@@ -281,9 +274,9 @@ void init_conn(pw::Connection conn) {
         req.headers.insert(CONNECTION_CLOSE);
 
         std::vector<char> proxied_req_data = req.build();
-        if (proxy.send(proxied_req_data.data(), proxied_req_data.size()) == PW_ERROR) {
+        if (proxy->send(proxied_req_data.data(), proxied_req_data.size()) == PW_ERROR) {
             ERR_NET;
-            if (conn.send(pw::HTTPResponse::create_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
@@ -307,27 +300,23 @@ int main(int argc, char** argv) {
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
 
-    pn::tcp::Server server;
-    if (server.bind("0.0.0.0", argv[1]) == PW_ERROR) {
+    auto server = pn::UniqueSock<pn::tcp::Server>();
+    if (server->bind("0.0.0.0", argv[1]) == PW_ERROR) {
         ERR_NET;
         return 1;
     }
 
-    if (configure_socket(server) == PW_ERROR) {
+    if (configure_socket(*server) == PW_ERROR) {
         ERR_NET;
         ERR("Failed to configure server socket");
         return 1;
     }
 
     INFO("Proxy server listening on port " << argv[1]);
-    if (server.listen([](pn::tcp::Connection& conn, void*) -> bool {
-            pw::Connection* web_conn = new pw::Connection(std::move(conn));
-            pw::threadpool.schedule([](void* data) {
-                auto web_conn = (pw::Connection*) data;
-                init_conn(std::move(*web_conn));
-                delete web_conn;
-            },
-                web_conn);
+    if (server->listen([](pn::tcp::Connection& conn, void*) -> bool {
+            pw::threadpool.schedule([conn](void* data) {
+                init_conn(pn::UniqueSock<pw::Connection>(conn));
+            });
             return true;
         }) == PW_ERROR) {
         ERR_NET;
