@@ -202,7 +202,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        INFO("Routing connection to " << split_target[0] << ":" << split_target[1]);
+        INFO("Routing connection to " << split_target[0] << ':' << split_target[1]);
         pw::threadpool.schedule([conn, proxy](void*) mutable {
             route(std::move(conn), std::move(proxy));
         });
@@ -281,7 +281,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
+        INFO("Routing HTTP request to " << split_host[0] << ':' << split_host[1]);
         route(std::move(proxy), conn);
     }
 }
