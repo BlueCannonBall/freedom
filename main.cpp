@@ -180,7 +180,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             split_target.push_back("80");
         }
 
-        auto proxy = pn::make_shared<pn::tcp::Client>();
+        pn::SharedSock<pn::tcp::Client> proxy;
         if (proxy->connect(split_target[0], split_target[1]) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
@@ -245,7 +245,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             split_host.push_back("80");
         }
 
-        auto proxy = pn::make_shared<pn::tcp::Client>();
+        pn::UniqueSock<pn::tcp::Client> proxy;
         if (proxy->connect(split_host[0], split_host[1]) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
@@ -282,7 +282,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         INFO("Routing HTTP request to " << split_host[0] << ":" << split_host[1]);
-        route(std::move(proxy), std::move(conn));
+        route(std::move(proxy), conn);
     }
 }
 
@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
 
-    auto server = pn::UniqueSock<pn::tcp::Server>();
+    pn::UniqueSock<pn::tcp::Server> server;
     if (server->bind("0.0.0.0", argv[1]) == PW_ERROR) {
         ERR_NET;
         return 1;
@@ -315,7 +315,7 @@ int main(int argc, char** argv) {
     INFO("Proxy server listening on port " << argv[1]);
     if (server->listen([](pn::tcp::Connection& conn, void*) -> bool {
             pw::threadpool.schedule([conn](void* data) {
-                init_conn(pn::UniqueSock<pw::Connection>(conn));
+                init_conn(pn::SharedSock<pw::Connection>(conn));
             });
             return true;
         }) == PW_ERROR) {
