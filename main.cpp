@@ -208,6 +208,8 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         });
         route(std::move(proxy), std::move(conn));
     } else {
+        conn->shutdown(PN_SD_RECEIVE);
+        
         size_t protocol_len;
         if (boost::starts_with(req.target, "http://")) {
             protocol_len = 7;
@@ -280,6 +282,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
                 ERR_WEB;
             return;
         }
+        proxy->shutdown(PN_SD_SEND);
 
         INFO("Routing HTTP request to " << split_host[0] << ':' << split_host[1]);
         route(std::move(proxy), conn);
