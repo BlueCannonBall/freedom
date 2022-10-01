@@ -273,7 +273,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         req.headers["Host"] = std::move(host);
-        req.headers["Accept-Encoding"] = "chunked, identity";
+        req.headers["Accept-Encoding"] = "chunked";
         req.headers.insert(CONNECTION_CLOSE);
 
         INFO("Routing HTTP request to " << split_host[0] << ':' << split_host[1]);
