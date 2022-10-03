@@ -185,7 +185,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("403", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
@@ -257,7 +257,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+            if (conn->send(pw::HTTPResponse::make_basic("403", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
         }
