@@ -5,11 +5,11 @@ else
 endif
 
 CXX = g++
-CXXFLAGS = -Wall -O2 -flto -pthread -std=c++14
+CXXFLAGS = -Wall -O2 -pthread -std=c++14
 LIBS = -lssl -lcrypto
 HEADERS = $(shell find . -name "*.hpp")
 OBJDIR = obj
-OBJS = $(OBJDIR)/main.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o
+OBJS = $(OBJDIR)/main.o $(OBJDIR)/adblock.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o
 TARGET = freedom
 PREFIX = /usr/local
 
@@ -22,6 +22,10 @@ $(TARGET): $(OBJS)
 	$(CXX) $^ $(CXXFLAGS) $(LIBS) -o $@
 
 $(OBJDIR)/main.o: main.cpp $(HEADERS)
+	mkdir -p $(OBJDIR)
+	$(CXX) -c $< $(CXXFLAGS) -o $@
+
+$(OBJDIR)/adblock.o: adblock.cpp adblock.hpp
 	mkdir -p $(OBJDIR)
 	$(CXX) -c $< $(CXXFLAGS) -o $@
 

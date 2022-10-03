@@ -1,4 +1,5 @@
 #include "Polyweb/polyweb.hpp"
+#include "adblock.hpp"
 #include <cctype>
 #include <iomanip>
 #include <mutex>
@@ -170,20 +171,27 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        std::vector<std::string> split_target;
-        boost::split(split_target, req.target, boost::is_any_of(":"));
+        std::vector<std::string> split_host;
+        boost::split(split_host, req.target, boost::is_any_of(":"));
 
-        if (split_target.size() > 2) {
+        if (split_host.size() > 2) {
             ERR("Failed to parse target of HTTP CONNECT request");
             if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
             return;
-        } else if (split_target.size() == 1) {
-            split_target.push_back("80");
+        } else if (split_host.size() == 1) {
+            split_host.push_back("80");
+        }
+
+        if (adblock::check_hostname(split_host[0])) {
+            INFO("Got ad connection");
+            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+                ERR_WEB;
+            return;
         }
 
         pn::SharedSock<pn::tcp::Client> proxy;
-        if (proxy->connect(split_target[0], split_target[1]) == PW_ERROR) {
+        if (proxy->connect(split_host[0], split_host[1]) == PW_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
             if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
@@ -204,7 +212,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        INFO("Routing connection to " << split_target[0] << ':' << split_target[1]);
+        INFO("Routing connection to " << split_host[0] << ':' << split_host[1]);
         pw::threadpool.schedule([conn, proxy](void*) mutable {
             route(std::move(conn), std::move(proxy));
         });
@@ -245,6 +253,13 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         } else if (split_host.size() == 1) {
             split_host.push_back("80");
+        }
+
+        if (adblock::check_hostname(split_host[0])) {
+            INFO("Got ad connection");
+            if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
+                ERR_WEB;
+            return;
         }
 
         pn::UniqueSock<pn::tcp::Client> proxy;
