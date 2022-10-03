@@ -13,6 +13,10 @@ namespace adblock {
         blocked_hostnames.insert(blocked_hostnames_raw.begin(), blocked_hostnames_raw.end());
     }
 
+    inline void quit() {
+        blocked_hostnames.clear();
+    }
+
     inline bool check_hostname(const std::string& hostname) {
         return blocked_hostnames.count(hostname);
     }

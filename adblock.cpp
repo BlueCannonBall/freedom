@@ -42557,4 +42557,4 @@ namespace adblock {
         "www.telemetrydeck.com",
         "api.telemetrydeck.com",
     };
-}
+} // namespace adblock

@@ -337,6 +337,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
+    adblock::init();
 
     pn::UniqueSock<pn::tcp::Server> server;
     if (server->bind("0.0.0.0", argv[1]) == PW_ERROR) {
@@ -361,6 +362,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    adblock::quit();
     pn::quit();
     return 0;
 }
