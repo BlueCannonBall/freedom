@@ -12,7 +12,7 @@ namespace adblock {
     extern thread_local std::hash<std::string> hostname_hasher;
 
     inline void init() {
-        for (size_t i = 0; i < blocked_hostname_count; i++) {
+        for (size_t i = 0; i < blocked_hostname_count / sizeof(const char*); i++) {
             blocked_hostname_hashes.insert(hostname_hasher(blocked_hostnames[i]));
         }
     }
