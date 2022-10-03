@@ -1,8 +1,7 @@
 #include "adblock.hpp"
 
 namespace adblock {
-    std::set<std::string> blocked_hostnames;
-    const std::vector<const char*> blocked_hostnames_raw = {
+    const char* const blocked_hostnames[] = {
         "0001-cab8-4c8c-43de.reporo.net",
         "002-slq-470.mktoresp.com",
         "004-btr-463.mktoresp.com",
@@ -42557,4 +42556,7 @@ namespace adblock {
         "www.telemetrydeck.com",
         "api.telemetrydeck.com",
     };
+    constexpr size_t blocked_hostname_count = sizeof(blocked_hostnames);
+    std::set<std::hash<std::string>::result_type> blocked_hostname_hashes;
+    thread_local std::hash<std::string> hostname_hasher;
 } // namespace adblock
