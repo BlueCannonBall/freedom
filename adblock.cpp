@@ -42557,6 +42557,6 @@ namespace adblock {
         "api.telemetrydeck.com",
     };
     const size_t blocked_hostname_count = sizeof(blocked_hostnames) / sizeof(const char*);
-    thread_local std::hash<std::string> hostname_hasher;
+    std::hash<std::string> hostname_hasher;
     std::unordered_set<decltype(hostname_hasher)::result_type> blocked_hostname_hashes;
 } // namespace adblock
