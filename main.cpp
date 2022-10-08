@@ -234,7 +234,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             req.method == "GET" &&
             (upgrade_it = req.headers.find("Upgrade")) != req.headers.end() &&
             (connection_it = req.headers.find("Connection")) != req.headers.end() &&
-            boost::to_lower_copy(upgrade_it->second) == "websocket" &&
+            boost::contains(boost::to_lower_copy(upgrade_it->second), "websocket") &&
             boost::to_lower_copy(connection_it->second) == "upgrade") {
             ERR("Client attempted to make absolute-target WebSocket connection");
             if (conn->send(pw::HTTPResponse::make_basic("501", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
