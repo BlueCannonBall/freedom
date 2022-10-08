@@ -228,12 +228,14 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
+        pw::HTTPHeaders::const_iterator connection_it;
+        pw::HTTPHeaders::const_iterator upgrade_it;
         if (req.http_version == "HTTP/1.1" &&
             req.method == "GET" &&
-            req.headers.count("Upgrade") &&
-            req.headers.count("Connection") &&
-            boost::to_lower_copy(req.headers["Connection"]) == "upgrade" &&
-            boost::to_lower_copy(req.headers["Upgrade"]) == "websocket") {
+            (upgrade_it = req.headers.find("Upgrade")) != req.headers.end() &&
+            (connection_it = req.headers.find("Connection")) != req.headers.end() &&
+            boost::to_lower_copy(upgrade_it->second) == "websocket" &&
+            boost::to_lower_copy(connection_it->second) == "upgrade") {
             ERR("Client attempted to make absolute-target WebSocket connection");
             if (conn->send(pw::HTTPResponse::make_basic("501", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
