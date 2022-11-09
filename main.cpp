@@ -2,7 +2,6 @@
 #include "adblock.hpp"
 #include <cctype>
 #include <iomanip>
-#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -16,41 +15,30 @@
 
 #define INFO(msg)                                               \
     do {                                                        \
-        print_lock.lock();                                      \
         std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " \
                   << "Info: " << msg << std::endl;              \
-        print_lock.unlock();                                    \
     } while (0)
 #define ERR(msg)                                                \
     do {                                                        \
-        print_lock.lock();                                      \
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
                   << "Error: " << msg << std::endl;             \
-        print_lock.unlock();                                    \
     } while (0)
 #define ERR_NET                                                                  \
     do {                                                                         \
-        print_lock.lock();                                                       \
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "                  \
                   << "Network error: " << pn::universal_strerror() << std::endl; \
-        print_lock.unlock();                                                     \
     } while (0)
 #define ERR_WEB                                                 \
     do {                                                        \
-        print_lock.lock();                                      \
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
                   << pw::universal_strerror() << std::endl;     \
-        print_lock.unlock();                                    \
     } while (0)
 #define ERR_CLI(msg)                                            \
     do {                                                        \
-        print_lock.lock();                                      \
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
                   << "CLI error: " << msg << std::endl;         \
-        print_lock.unlock();                                    \
     } while (0)
 
-std::mutex print_lock;
 std::string password;
 
 int configure_socket(pn::Socket& s) {
