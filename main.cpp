@@ -3,9 +3,11 @@
 #include <cctype>
 #include <iomanip>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
+#include <atomic>
 
 #define CONNECTION_CLOSE \
     { "Connection", "close" }
@@ -52,6 +54,24 @@
 
 std::mutex print_lock;
 std::string password;
+
+// Stats
+const time_t running_since = time(nullptr);
+std::atomic<unsigned long long> requests_made(0);
+
+pw::HTTPResponse info_page() {
+    std::ostringstream html;
+    html << "<html>";
+    html << "<body>";
+    html << "<h1>Proxy Statistics</h1>";
+    html << "<p>Running since: " << pw::build_date(running_since) << "</p>";
+    html << "<p>Requests made: " << requests_made << "</p>";
+    html << "<p>Requests per second: " << ((float) requests_made / (time(nullptr) - running_since)) << "</p>";
+    html << "</body>";
+    html << "</html>";
+
+    pw::HTTPResponse ret("200", html.str(), {{"Host", "http://freedom.bcb"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+}
 
 int configure_socket(pn::Socket& s) {
     const int value = 1;
@@ -117,6 +137,8 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         conn->send(pw::HTTPResponse::make_basic(resp_status_code, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}));
         return;
     }
+
+    requests_made++;
 
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
@@ -259,6 +281,15 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             INFO("Got ad connection");
             if (conn->send(pw::HTTPResponse::make_basic("403", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PW_ERROR)
                 ERR_WEB;
+            return;
+        }
+
+        if (split_host[0] == "freedom.bcb") {
+            auto resp = info_page();
+            std::vector<char> proxied_resp_data = resp.build();
+            if (conn->send(proxied_resp_data.data(), proxied_resp_data.size()) == PW_ERROR) {
+                ERR_NET;
+            }
             return;
         }
 
