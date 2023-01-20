@@ -59,7 +59,7 @@ pw::HTTPResponse info_page() {
     html << "</body>";
     html << "</html>";
 
-    pw::HTTPResponse ret("200", html.str(), {{"Host", "http://freedom.bcb"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+    return pw::HTTPResponse("200", html.str(), {{"Host", "http://freedom.bcb"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
 }
 
 int configure_socket(pn::Socket& s) {
