@@ -12,5 +12,5 @@ $ sudo make install
 
 ## Usage
 ```
-$ freedom <PORT>
+$ freedom <PORT> [PASSWORD]
 ```

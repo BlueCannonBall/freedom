@@ -8,7 +8,7 @@
 namespace adblock {
     const extern char* const blocked_hostnames[];
     const extern size_t blocked_hostname_count;
-    extern thread_local std::hash<std::string> hostname_hasher;
+    extern std::hash<std::string> hostname_hasher;
     extern std::unordered_set<decltype(hostname_hasher)::result_type> blocked_hostname_hashes;
 
     inline void init() {
