@@ -277,7 +277,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         if (split_host[0] == "freedom.bcb") {
             auto resp = info_page();
             std::vector<char> proxied_resp_data = resp.build();
-            if (conn->send(proxied_resp_data.data(), proxied_resp_data.size()) == PW_ERROR) {
+            if (conn->send(proxied_resp_data.data(), proxied_resp_data.size()) == PN_ERROR) {
                 ERR_NET;
             }
             return;
