@@ -7,7 +7,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <atomic>
 
 #define CONNECTION_CLOSE \
     { "Connection", "close" }
@@ -45,21 +44,29 @@
 std::string password;
 
 // Stats
+std::mutex stats_mtx;
 const time_t running_since = time(nullptr);
-std::atomic<unsigned long long> requests_made(0);
+unsigned long long requests_made = 0;
+std::unordered_set<std::string> users;
 
-pw::HTTPResponse info_page() {
+pw::HTTPResponse stats_page() {
+    std::lock_guard<std::mutex> lock(stats_mtx);
+
     std::ostringstream html;
     html << "<html>";
+    html << "<head>";
+    html << "<title>Proxy Statistics</title>";
+    html << "</head>";
     html << "<body>";
     html << "<h1>Proxy Statistics</h1>";
     html << "<p>Running since: " << pw::build_date(running_since) << "</p>";
     html << "<p>Requests made: " << requests_made << "</p>";
     html << "<p>Requests per second: " << ((float) requests_made / (time(nullptr) - running_since)) << "</p>";
+    html << "<p>Unique users: " << users.size() << "</p>";
     html << "</body>";
     html << "</html>";
 
-    return pw::HTTPResponse("200", html.str(), {{"Host", "http://freedom.bcb"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+    return pw::HTTPResponse("200", html.str(), {{"Host", "http://proxy.info"}, {"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
 }
 
 int configure_socket(pn::Socket& s) {
@@ -126,7 +133,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         return;
     }
 
+    stats_mtx.lock();
     requests_made++;
+    stats_mtx.unlock();
 
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
@@ -164,6 +173,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
                         ERR_WEB;
                     return;
                 }
+
+                stats_mtx.lock();
+                users.insert(split_decoded_auth[0]);
+                stats_mtx.unlock();
 
                 INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
             }
@@ -274,8 +287,13 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        if (split_host[0] == "freedom.bcb") {
-            auto resp = info_page();
+        if (split_host[0] == "proxy.info") {
+            pw::HTTPResponse resp;
+            if (req.target == "/") {
+                resp = stats_page();
+            } else {
+                resp = pw::HTTPResponse::make_basic("404", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
+            }
             std::vector<char> proxied_resp_data = resp.build();
             if (conn->send(proxied_resp_data.data(), proxied_resp_data.size()) == PN_ERROR) {
                 ERR_NET;
