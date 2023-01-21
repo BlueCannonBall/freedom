@@ -72,7 +72,7 @@ pw::HTTPResponse stats_page() {
     std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
     std::sort(user_pairs.begin(), user_pairs.end(), std::greater<>());
     for (const auto& user : user_pairs) {
-        html << "<li>" << user.first << " - " << user.second << " requests</li>";
+        html << "<li>" << user.first << " - " << user.second << " request(s)</li>";
     }
     html << "</ol>";
     
@@ -81,7 +81,7 @@ pw::HTTPResponse stats_page() {
     std::vector<std::pair<std::string, unsigned long long>> site_pairs(sites.begin(), sites.end());
     std::sort(site_pairs.begin(), site_pairs.end(), std::greater<>());
     for (const auto& site : site_pairs) {
-        html << "<li>" << site.first << " - " << site.second << " visits</li>";
+        html << "<li>" << site.first << " - " << site.second << " visit(s)</li>";
     }
     html << "</ol>";
     html << "</body>";
