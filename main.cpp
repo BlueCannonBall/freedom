@@ -46,8 +46,9 @@ std::string password;
 // Stats
 std::mutex stats_mtx;
 const time_t running_since = time(nullptr);
-unsigned long long requests_made = 0;
-std::unordered_set<std::string> users;
+unsigned long long total_requests_received = 0;
+std::unordered_map<std::string, unsigned long long> users;
+std::unordered_map<std::string, unsigned long long> sites;
 
 pw::HTTPResponse stats_page() {
     std::lock_guard<std::mutex> lock(stats_mtx);
@@ -57,12 +58,32 @@ pw::HTTPResponse stats_page() {
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
     html << "</head>";
+
     html << "<body>";
     html << "<h1>Proxy Statistics</h1>";
+
     html << "<p>Running since: " << pw::build_date(running_since) << "</p>";
-    html << "<p>Requests made: " << requests_made << "</p>";
-    html << "<p>Requests per second: " << ((float) requests_made / (time(nullptr) - running_since)) << "</p>";
+    html << "<p>Requests received: " << total_requests_received << "</p>";
+    html << "<p>Requests per second: " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
+    
     html << "<p>Unique users: " << users.size() << "</p>";
+    html << "<p>Most active users:</p>";
+    html << "<ol>";
+    std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
+    std::sort(user_pairs.begin(), user_pairs.end(), std::greater<>());
+    for (const auto& user : user_pairs) {
+        html << "<li>" << user.first << "</li>";
+    }
+    html << "</ol>";
+    
+    html << "<p>Most used sites:</p>";
+    html << "<ol>";
+    std::vector<std::pair<std::string, unsigned long long>> site_pairs(sites.begin(), sites.end());
+    std::sort(site_pairs.begin(), site_pairs.end(), std::greater<>());
+    for (const auto& site : site_pairs) {
+        html << "<li>" << site.first << "</li>";
+    }
+    html << "</ol>";
     html << "</body>";
     html << "</html>";
 
@@ -134,7 +155,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
     }
 
     stats_mtx.lock();
-    requests_made++;
+    total_requests_received++;
     stats_mtx.unlock();
 
     if (!password.empty()) {
@@ -175,7 +196,12 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
                 }
 
                 stats_mtx.lock();
-                users.insert(split_decoded_auth[0]);
+                decltype(users)::iterator user_it;
+                if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
+                    user_it->second++;
+                } else {
+                    users[split_decoded_auth[0]] = 1;
+                }
                 stats_mtx.unlock();
 
                 INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
@@ -212,6 +238,15 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
                 ERR_WEB;
             return;
         }
+
+        stats_mtx.lock();
+        decltype(sites)::iterator site_it;
+        if ((site_it = sites.find(split_host[0])) != sites.end()) {
+            site_it->second++;
+        } else {
+            sites[split_host[0]] = 1;
+        }
+        stats_mtx.unlock();
 
         pn::SharedSock<pn::tcp::Client> proxy;
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
@@ -286,6 +321,15 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
                 ERR_WEB;
             return;
         }
+
+        stats_mtx.lock();
+        decltype(sites)::iterator site_it;
+        if ((site_it = sites.find(split_host[0])) != sites.end()) {
+            site_it->second++;
+        } else {
+            sites[split_host[0]] = 1;
+        }
+        stats_mtx.unlock();
 
         if (split_host[0] == "proxy.info") {
             pw::HTTPResponse resp;
