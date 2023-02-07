@@ -5,6 +5,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <sys/time.h>
 #include <utility>
 #include <vector>
 
@@ -110,6 +111,20 @@ int configure_socket(pn::Socket& s) {
         ERR_NET;
         return PN_ERROR;
     }
+
+    struct timeval timeout {
+        .tv_sec = 7200,
+        .tv_usec = 0,
+    };
+    if (s.setsockopt(SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof(timeval)) == PN_ERROR) {
+        ERR_NET;
+        return PN_ERROR;
+    }
+    if (s.setsockopt(SOL_SOCKET, SO_SNDTIMEO, (const char*) &timeout, sizeof(timeval)) == PN_ERROR) {
+        ERR_NET;
+        return PN_ERROR;
+    }
+
     return PN_OK;
 }
 
