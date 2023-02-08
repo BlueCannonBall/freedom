@@ -98,17 +98,14 @@ pw::HTTPResponse stats_page() {
 int configure_socket(pn::Socket& s) {
     const int value = 1;
     if (s.setsockopt(IPPROTO_TCP, TCP_NODELAY, (const char*) &value, sizeof(int)) == PN_ERROR) {
-        ERR_NET;
         return PN_ERROR;
     }
 #ifdef __linux__
     if (s.setsockopt(IPPROTO_TCP, TCP_QUICKACK, (const char*) &value, sizeof(int)) == PN_ERROR) {
-        ERR_NET;
         return PN_ERROR;
     }
 #endif
     if (s.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (const char*) &value, sizeof(int)) == PN_ERROR) {
-        ERR_NET;
         return PN_ERROR;
     }
     return PN_OK;
@@ -116,13 +113,12 @@ int configure_socket(pn::Socket& s) {
 
 int set_socket_timeout(pn::Socket& s, struct timeval timeout) {
     if (s.setsockopt(SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof(struct timeval)) == PN_ERROR) {
-        ERR_NET;
         return PN_ERROR;
     }
     if (s.setsockopt(SOL_SOCKET, SO_SNDTIMEO, (const char*) &timeout, sizeof(struct timeval)) == PN_ERROR) {
-        ERR_NET;
         return PN_ERROR;
     }
+    return PN_OK;
 }
 
 void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connection> b) {
