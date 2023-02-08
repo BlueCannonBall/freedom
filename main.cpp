@@ -111,21 +111,18 @@ int configure_socket(pn::Socket& s) {
         ERR_NET;
         return PN_ERROR;
     }
-
-    struct timeval timeout {
-        .tv_sec = 7200,
-        .tv_usec = 0,
-    };
-    if (s.setsockopt(SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof(timeval)) == PN_ERROR) {
-        ERR_NET;
-        return PN_ERROR;
-    }
-    if (s.setsockopt(SOL_SOCKET, SO_SNDTIMEO, (const char*) &timeout, sizeof(timeval)) == PN_ERROR) {
-        ERR_NET;
-        return PN_ERROR;
-    }
-
     return PN_OK;
+}
+
+int set_socket_timeout(pn::Socket& s, struct timeval timeout) {
+    if (s.setsockopt(SOL_SOCKET, SO_RCVTIMEO, (const char*) &timeout, sizeof(struct timeval)) == PN_ERROR) {
+        ERR_NET;
+        return PN_ERROR;
+    }
+    if (s.setsockopt(SOL_SOCKET, SO_SNDTIMEO, (const char*) &timeout, sizeof(struct timeval)) == PN_ERROR) {
+        ERR_NET;
+        return PN_ERROR;
+    }
 }
 
 void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connection> b) {
@@ -153,6 +150,13 @@ void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connecti
 }
 
 void init_conn(pn::SharedSock<pw::Connection> conn) {
+    if (set_socket_timeout(*conn, (struct timeval) {60, 0}) == PN_ERROR) {
+        ERR_NET;
+        ERR("Failed to configure socket");
+        conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}));
+        return;
+    }
+
     pw::HTTPRequest req;
     if (req.parse(*conn) == PN_ERROR) {
         ERR_WEB;
@@ -239,6 +243,15 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
+        if (set_socket_timeout(*conn, (struct timeval) {7200, 0}) == PN_ERROR) {
+            ERR_NET;
+            ERR("Failed to configure socket");
+            if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE})) == PN_ERROR) {
+                ERR_WEB;
+            }
+            return;
+        }
+
         std::vector<std::string> split_host;
         boost::split(split_host, req.target, boost::is_any_of(":"));
 
@@ -276,7 +289,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        if (configure_socket(*proxy) == PN_ERROR) {
+        if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, (struct timeval) {7200, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
             if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
@@ -373,7 +386,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
             return;
         }
 
-        if (configure_socket(*proxy) == PN_ERROR) {
+        if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, (struct timeval) {30, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
             if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
