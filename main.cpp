@@ -268,6 +268,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         stats_mtx.lock();
+        if (sites.size() >= 4096) {
+            sites.clear();
+        }
         decltype(sites)::iterator site_it;
         if ((site_it = sites.find(split_host[0])) != sites.end()) {
             site_it->second++;
@@ -351,6 +354,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         stats_mtx.lock();
+        if (sites.size() >= 4096) {
+            sites.clear();
+        }
         decltype(sites)::iterator site_it;
         if ((site_it = sites.find(split_host[0])) != sites.end()) {
             site_it->second++;
