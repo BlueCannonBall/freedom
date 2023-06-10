@@ -6,7 +6,7 @@ endif
 
 CXX = g++
 CXXFLAGS = -Wall -O2 -flto -pthread -std=c++14
-LIBS = -lssl -lcrypto
+LDLIBS = -lssl -lcrypto
 HEADERS = $(shell find . -name "*.hpp")
 OBJDIR = obj
 OBJS = $(OBJDIR)/main.o $(OBJDIR)/adblock.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o
@@ -15,11 +15,11 @@ PREFIX = /usr/local
 
 ifeq ($(WINDOWS),1)
 	CXXFLAGS += -static -static-libgcc -static-libstdc++
-	LIBS += -lws2_32
+	LDLIBS += -lws2_32
 endif
 
 $(TARGET): $(OBJS)
-	$(CXX) $^ $(CXXFLAGS) $(LIBS) -o $@
+	$(CXX) $^ $(CXXFLAGS) $(LDLIBS) -o $@
 
 $(OBJDIR)/main.o: main.cpp $(HEADERS)
 	mkdir -p $(OBJDIR)
