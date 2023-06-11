@@ -9,10 +9,10 @@ namespace adblock {
     const extern char* const blocked_hostnames[];
     const extern size_t blocked_hostname_count;
     extern std::hash<std::string> hostname_hasher;
-    extern std::unordered_set<decltype(hostname_hasher)::result_type> blocked_hostname_hashes;
+    extern std::unordered_set<size_t> blocked_hostname_hashes;
 
     inline void init() {
-        for (size_t i = 0; i < blocked_hostname_count; i++) {
+        for (size_t i = 0; i < blocked_hostname_count; ++i) {
             blocked_hostname_hashes.insert(hostname_hasher(blocked_hostnames[i]));
         }
     }
