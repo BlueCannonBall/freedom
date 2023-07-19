@@ -125,7 +125,7 @@ void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connecti
     char buf[UINT16_MAX];
     for (;;) {
         ssize_t read_result;
-        if ((read_result = a->recv(buf, sizeof(buf))) == 0) {
+        if ((read_result = a->recv(buf, sizeof buf)) == 0) {
             INFO("Connection closed");
             break;
         } else if (read_result == PN_ERROR) {
