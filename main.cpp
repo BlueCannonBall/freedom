@@ -174,7 +174,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
     }
 
     stats_mtx.lock();
-    total_requests_received++;
+    ++total_requests_received;
     stats_mtx.unlock();
 
     if (!password.empty()) {
@@ -217,7 +217,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
                 stats_mtx.lock();
                 decltype(users)::iterator user_it;
                 if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
-                    user_it->second++;
+                    ++user_it->second;
                 } else {
                     users[split_decoded_auth[0]] = 1;
                 }
@@ -273,7 +273,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
         decltype(sites)::iterator site_it;
         if ((site_it = sites.find(split_host[0])) != sites.end()) {
-            site_it->second++;
+            ++site_it->second;
         } else {
             sites[split_host[0]] = 1;
         }
@@ -359,7 +359,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
         decltype(sites)::iterator site_it;
         if ((site_it = sites.find(split_host[0])) != sites.end()) {
-            site_it->second++;
+            ++site_it->second;
         } else {
             sites[split_host[0]] = 1;
         }
