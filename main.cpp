@@ -121,7 +121,7 @@ int set_socket_timeout(pn::Socket& s, struct timeval timeout) {
     return PN_OK;
 }
 
-void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connection> b) {
+void route(pn::SharedSock<pn::tcp::Connection> a, pn::BufReceiver& buf_receiver, pn::WeakSock<pn::tcp::Connection> b) {
     char buf[UINT16_MAX];
     for (;;) {
         ssize_t read_result;
@@ -145,7 +145,7 @@ void route(pn::SharedSock<pn::tcp::Connection> a, pn::WeakSock<pn::tcp::Connecti
     }
 }
 
-void init_conn(pn::SharedSock<pw::Connection> conn) {
+void init_conn(pn::SharedSock<pw::Connection> conn, pn::BufReceiver& conn_buf_receiver) {
     if (set_socket_timeout(*conn, (struct timeval) {60, 0}) == PN_ERROR) {
         ERR_NET;
         ERR("Failed to configure socket");
@@ -154,7 +154,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
     }
 
     pw::HTTPRequest req;
-    if (req.parse(*conn) == PN_ERROR) {
+    if (req.parse(*conn, conn_buf_receiver) == PN_ERROR) {
         ERR_WEB;
         ERR("Failed to parse HTTP request");
         std::string resp_status_code;
@@ -280,6 +280,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         stats_mtx.unlock();
 
         pn::SharedSock<pn::tcp::Client> proxy;
+        pn::BufReceiver proxy_buf_receiver;
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
@@ -302,10 +303,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         INFO("Routing connection to " << split_host[0] << ':' << split_host[1]);
-        pw::threadpool.schedule([conn, proxy](void*) mutable {
-            route(std::move(conn), std::move(proxy));
+        pw::threadpool.schedule([conn, conn_buf_receiver, proxy](void*) mutable {
+            route(std::move(conn), conn_buf_receiver, std::move(proxy));
         });
-        route(std::move(proxy), std::move(conn));
+        route(std::move(proxy), proxy_buf_receiver, std::move(conn));
     } else {
         size_t protocol_len;
         if (boost::starts_with(req.target, "http://")) {
@@ -380,6 +381,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         pn::UniqueSock<pn::tcp::Client> proxy;
+        pn::BufReceiver proxy_buf_receiver;
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
@@ -419,7 +421,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn) {
         }
 
         pw::HTTPResponse resp;
-        if (resp.parse(*proxy) == PN_ERROR) {
+        if (resp.parse(*proxy, proxy_buf_receiver) == PN_ERROR) {
             ERR_WEB;
             ERR("Failed to parse HTTP response");
             if (conn->send(pw::HTTPResponse::make_basic("500", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
@@ -471,7 +473,8 @@ int main(int argc, char** argv) {
     INFO("Proxy server listening on port " << argv[1]);
     if (server->listen([](pn::tcp::Connection& conn, void*) -> bool {
             pw::threadpool.schedule([conn](void* data) {
-                init_conn(pn::SharedSock<pw::Connection>(conn));
+                pn::BufReceiver buf_receiver;
+                init_conn(pn::SharedSock<pw::Connection>(conn), buf_receiver);
             });
             return true;
         }) == PN_ERROR) {
