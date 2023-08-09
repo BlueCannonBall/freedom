@@ -121,7 +121,7 @@ int set_socket_timeout(pn::Socket& s, struct timeval timeout) {
     return PN_OK;
 }
 
-void route(pn::SharedSock<pn::tcp::Connection> a, pn::BufReceiver& buf_receiver, pn::WeakSock<pn::tcp::Connection> b) {
+void route(pn::SharedSock<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_receiver, pn::WeakSock<pn::tcp::Connection> b) {
     char buf[UINT16_MAX];
     for (;;) {
         ssize_t read_result;
@@ -145,7 +145,7 @@ void route(pn::SharedSock<pn::tcp::Connection> a, pn::BufReceiver& buf_receiver,
     }
 }
 
-void init_conn(pn::SharedSock<pw::Connection> conn, pn::BufReceiver& conn_buf_receiver) {
+void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_buf_receiver) {
     if (set_socket_timeout(*conn, (struct timeval) {60, 0}) == PN_ERROR) {
         ERR_NET;
         ERR("Failed to configure socket");
@@ -280,7 +280,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::BufReceiver& conn_buf_re
         stats_mtx.unlock();
 
         pn::SharedSock<pn::tcp::Client> proxy;
-        pn::BufReceiver proxy_buf_receiver;
+        pn::tcp::BufReceiver proxy_buf_receiver;
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
@@ -381,7 +381,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::BufReceiver& conn_buf_re
         }
 
         pn::UniqueSock<pn::tcp::Client> proxy;
-        pn::BufReceiver proxy_buf_receiver;
+        pn::tcp::BufReceiver proxy_buf_receiver;
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
@@ -473,7 +473,7 @@ int main(int argc, char** argv) {
     INFO("Proxy server listening on port " << argv[1]);
     if (server->listen([](pn::tcp::Connection& conn, void*) -> bool {
             pw::threadpool.schedule([conn](void* data) {
-                pn::BufReceiver buf_receiver;
+                pn::tcp::BufReceiver buf_receiver;
                 init_conn(pn::SharedSock<pw::Connection>(conn), buf_receiver);
             });
             return true;
