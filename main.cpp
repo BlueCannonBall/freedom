@@ -125,11 +125,11 @@ void route(pn::SharedSock<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_rece
     char buf[UINT16_MAX];
     for (;;) {
         ssize_t read_result;
-        if ((read_result = a->recv(buf, sizeof buf)) == 0) {
-            INFO("Connection closed");
-            break;
-        } else if (read_result == PN_ERROR) {
+        if ((read_result = a->recv(buf, UINT16_MAX)) == PN_ERROR) {
             ERR_NET;
+            break;
+        } else if (read_result == 0) {
+            INFO("Connection closed");
             break;
         }
 
