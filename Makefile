@@ -9,7 +9,7 @@ CXXFLAGS = -Wall -O2 -flto -pthread -std=c++14
 LDLIBS = -lcrypto
 HEADERS = $(shell find . -name "*.hpp")
 OBJDIR = obj
-OBJS = $(OBJDIR)/main.o $(OBJDIR)/adblock.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o
+OBJS = $(OBJDIR)/main.o $(OBJDIR)/adblock.o $(OBJDIR)/polynet.o $(OBJDIR)/polyweb.o $(OBJDIR)/polyweb_string.o
 TARGET = freedom
 PREFIX = /usr/local
 
@@ -34,6 +34,10 @@ $(OBJDIR)/polynet.o: Polyweb/Polynet/polynet.cpp Polyweb/Polynet/polynet.hpp
 	$(CXX) -c $< $(CXXFLAGS) -o $@
 
 $(OBJDIR)/polyweb.o: Polyweb/polyweb.cpp Polyweb/Polynet/polynet.hpp Polyweb/polyweb.hpp Polyweb/threadpool.hpp
+	mkdir -p $(OBJDIR)
+	$(CXX) -c $< $(CXXFLAGS) -o $@
+
+$(OBJDIR)/polyweb_string.o: Polyweb/string.cpp Polyweb/string.hpp
 	mkdir -p $(OBJDIR)
 	$(CXX) -c $< $(CXXFLAGS) -o $@
 

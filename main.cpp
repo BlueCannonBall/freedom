@@ -1,5 +1,6 @@
 #include "Polyweb/polyweb.hpp"
 #include "adblock.hpp"
+#include <algorithm>
 #include <cctype>
 #include <iomanip>
 #include <mutex>
@@ -184,24 +185,22 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                 ERR_WEB;
             return;
         } else {
-            std::vector<std::string> split_auth;
-            boost::split(split_auth, req.headers["Proxy-Authorization"], isspace);
+            std::vector<std::string> split_auth = pw::string::split_and_trim(req.headers["Proxy-Authorization"], ' ');
             if (split_auth.size() < 2) {
                 ERR("Authorization failed: Bad Proxy-Authorization header");
                 if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
                     ERR_WEB;
                 return;
-            } else if (boost::to_lower_copy(split_auth[0]) != "basic") {
+            } else if (pw::string::to_lower_copy(split_auth[0]) != "basic") {
                 ERR("Authorization failed: Unsupported authentication scheme");
                 if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
                     ERR_WEB;
                 return;
             } else {
-                auto decoded_auth = pw::b64_decode(split_auth[1]);
+                auto decoded_auth = pw::base64_decode(split_auth[1]);
                 std::string decoded_auth_string(decoded_auth.begin(), decoded_auth.end());
 
-                std::vector<std::string> split_decoded_auth;
-                boost::split(split_decoded_auth, decoded_auth_string, boost::is_any_of(":"));
+                std::vector<std::string> split_decoded_auth = pw::string::split(decoded_auth_string, ':');
                 if (split_decoded_auth.size() != 2) {
                     ERR("Authorization failed: Bad username:password combination");
                     if (conn->send(pw::HTTPResponse::make_basic("407", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version)) == PN_ERROR)
@@ -229,10 +228,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
     }
 
     if (req.method == "CONNECT") {
-        if (boost::starts_with(req.target, "http://") ||
-            boost::starts_with(req.target, "https://") ||
-            boost::starts_with(req.target, "ws://") ||
-            boost::starts_with(req.target, "wss://")) {
+        if (pw::string::starts_with(req.target, "http://") ||
+            pw::string::starts_with(req.target, "https://") ||
+            pw::string::starts_with(req.target, "ws://") ||
+            pw::string::starts_with(req.target, "wss://")) {
             ERR("Client attempted use absolute-form target in HTTP CONNECT request");
             if (conn->send(pw::HTTPResponse::make_basic("400", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
                 ERR_WEB;
@@ -248,8 +247,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             return;
         }
 
-        std::vector<std::string> split_host;
-        boost::split(split_host, req.target, boost::is_any_of(":"));
+        std::vector<std::string> split_host = pw::string::split(req.target, ':');
 
         if (split_host.size() > 2) {
             ERR("Failed to parse target of HTTP CONNECT request");
@@ -309,7 +307,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         route(std::move(proxy), proxy_buf_receiver, std::move(conn));
     } else {
         size_t protocol_len;
-        if (boost::starts_with(req.target, "http://")) {
+        if (pw::string::starts_with(req.target, "http://")) {
             protocol_len = 7;
         } else {
             ERR("Client (possibly) attempted to make normal HTTP request");
@@ -324,8 +322,8 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             req.method == "GET" &&
             (upgrade_it = req.headers.find("Upgrade")) != req.headers.end() &&
             (connection_it = req.headers.find("Connection")) != req.headers.end() &&
-            boost::contains(boost::to_lower_copy(upgrade_it->second), "websocket") &&
-            boost::to_lower_copy(connection_it->second) == "upgrade") {
+            pw::string::to_lower_copy(upgrade_it->second).find("websocket") != std::string::npos &&
+            pw::string::to_lower_copy(connection_it->second) == "upgrade") {
             ERR("Client attempted to make absolute-target WebSocket connection");
             if (conn->send(pw::HTTPResponse::make_basic("501", {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
                 ERR_WEB;
@@ -335,8 +333,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         std::string::iterator path_begin;
         std::string host(req.target.begin() + protocol_len, path_begin = std::find(req.target.begin() + protocol_len + 1, req.target.end(), '/'));
         req.target = std::string(path_begin, req.target.end());
-        std::vector<std::string> split_host;
-        boost::split(split_host, host, boost::is_any_of(":"));
+        std::vector<std::string> split_host = pw::string::split(host, ':');
 
         if (split_host.size() > 2) {
             ERR("Failed to parse host of absolute-form target HTTP request");
@@ -399,7 +396,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         }
 
         for (auto it = req.headers.cbegin(); it != req.headers.cend();) {
-            if (boost::starts_with(boost::to_lower_copy(it->first), "proxy-")) {
+            if (pw::string::starts_with(pw::string::to_lower_copy(it->first), "proxy-")) {
                 it = req.headers.erase(it);
             } else {
                 ++it;
