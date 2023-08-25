@@ -5,7 +5,7 @@ else
 endif
 
 CXX = g++
-CXXFLAGS = -Wall -std=c++14 -O2 -flto -pthread
+CXXFLAGS = -Wall -std=c++14 -O3 -pthread
 LDLIBS = -lcrypto
 HEADERS = $(shell find . -name "*.hpp")
 OBJDIR = obj

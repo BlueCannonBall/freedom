@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/time.h>
 #include <utility>
@@ -156,6 +157,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         case PW_EWEB:
             resp_status_code = 400;
             break;
+
+        default:
+            throw std::logic_error("Invalid error");
         }
         conn->send(pw::HTTPResponse::make_basic(resp_status_code, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}));
         return;
