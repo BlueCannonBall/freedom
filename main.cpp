@@ -83,7 +83,7 @@ pw::HTTPResponse stats_page() {
     html << "</body>";
     html << "</html>";
 
-    return pw::HTTPResponse(200, html.str(), {{"Host", "http://proxy.info"}, {"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+    return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
 }
 
 int configure_socket(pn::Socket& s) {
