@@ -50,7 +50,6 @@ std::mutex stats_mtx;
 const time_t running_since = time(nullptr);
 unsigned long long total_requests_received = 0;
 std::unordered_map<std::string, unsigned long long> users;
-std::unordered_map<std::string, unsigned long long> sites;
 
 pw::HTTPResponse stats_page() {
     std::lock_guard<std::mutex> lock(stats_mtx);
@@ -80,16 +79,6 @@ pw::HTTPResponse stats_page() {
     }
     html << "</ol>";
 
-    html << "<p>Most used sites:</p>";
-    html << "<ol>";
-    std::vector<std::pair<std::string, unsigned long long>> site_pairs(sites.begin(), sites.end());
-    std::sort(site_pairs.begin(), site_pairs.end(), [](const auto& a, const auto& b) {
-        return a.second > b.second;
-    });
-    for (const auto& site : site_pairs) {
-        html << "<li>" << site.first << " - " << site.second << " visit(s)</li>";
-    }
-    html << "</ol>";
     html << "</body>";
     html << "</html>";
 
@@ -216,6 +205,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                 if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
                     ++user_it->second;
                 } else {
+                    if (users.size() >= 1024) {
+                        users.clear();
+                    }
                     users[split_decoded_auth[0]] = 1;
                 }
                 stats_mtx.unlock();
@@ -262,18 +254,6 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                 ERR_WEB;
             return;
         }
-
-        stats_mtx.lock();
-        if (sites.size() >= 4096) {
-            sites.clear();
-        }
-        decltype(sites)::iterator site_it;
-        if ((site_it = sites.find(split_host[0])) != sites.end()) {
-            ++site_it->second;
-        } else {
-            sites[split_host[0]] = 1;
-        }
-        stats_mtx.unlock();
 
         pn::SharedSock<pn::tcp::Client> proxy;
         pn::tcp::BufReceiver proxy_buf_receiver;
@@ -348,18 +328,6 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                 ERR_WEB;
             return;
         }
-
-        stats_mtx.lock();
-        if (sites.size() >= 4096) {
-            sites.clear();
-        }
-        decltype(sites)::iterator site_it;
-        if ((site_it = sites.find(split_host[0])) != sites.end()) {
-            ++site_it->second;
-        } else {
-            sites[split_host[0]] = 1;
-        }
-        stats_mtx.unlock();
 
         if (split_host[0] == "proxy.info") {
             pw::HTTPResponse resp;
