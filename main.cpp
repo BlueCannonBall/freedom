@@ -54,22 +54,22 @@ std::unordered_map<std::string, unsigned long long> users;
 
 pw::HTTPResponse stats_page() {
     std::lock_guard<std::mutex> lock(stats_mtx);
-
     std::ostringstream html;
     html << "<html>";
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
+    html << "<style>body { margin: 20px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
     html << "</head>";
 
     html << "<body>";
-    html << "<h1>Proxy Statistics</h1>";
+    html << "<h1 style=\"text-align: center;\">Proxy Statistics</h1>";
 
-    html << "<p>Running since: " << pw::build_date(running_since) << "</p>";
-    html << "<p>Requests received: " << total_requests_received << "</p>";
-    html << "<p>Requests per second: " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
+    html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
+    html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
+    html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
 
-    html << "<p>Unique users: " << users.size() << "</p>";
-    html << "<p>Most active users:</p>";
+    html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
+    html << "<p><strong>Most active users:</strong></p>";
     html << "<ol>";
     std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
     std::sort(user_pairs.begin(), user_pairs.end(), [](const auto& a, const auto& b) {
@@ -80,10 +80,32 @@ pw::HTTPResponse stats_page() {
     }
     html << "</ol>";
 
+    html << "<h2 style=\"position: absolute; bottom: 10px; font-family: serif; color: #FF6666;\">By Charter of His Majesty The King</h2>";
+    html << "<h2 style=\"position: absolute; bottom: 10px; right: 20px; font-family: serif; color: #FF6666;\">Royal Society of Burlington</h2>";
+
     html << "</body>";
     html << "</html>";
-
     return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+}
+
+pw::HTTPResponse not_found_page(const std::string& host, const std::string& error_message) {
+    std::ostringstream html;
+    html << "<html>";
+    html << "<head>";
+    html << "<title>" << host << "</title>";
+    html << "<style>body { margin: 20px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
+    html << "</head>";
+
+    html << "<body>";
+
+    html << "<div style=\"margin: 0; position: absolute; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%); padding: 10px;\">";
+    html << "<h1 style=\"text-align: center;\">\"" << host << "\" could not be loaded</h1>";
+    html << "<p style=\"text-align: center;\"><strong>Error:</strong> " << error_message << "</p>";
+    html << "</div>";
+
+    html << "</body>";
+    html << "</html>";
+    return pw::HTTPResponse(404, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
 }
 
 int configure_socket(pn::Socket& s) {
@@ -140,7 +162,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
     if (set_socket_timeout(*conn, (struct timeval) {60, 0}) == PN_ERROR) {
         ERR_NET;
         ERR("Failed to configure socket");
-        conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}));
+        conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
         return;
     }
 
@@ -161,7 +183,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         default:
             throw std::logic_error("Invalid error");
         }
-        conn->send(pw::HTTPResponse::make_basic(resp_status_code, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}));
+        conn->send_basic(resp_status_code, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
         return;
     }
 
@@ -172,19 +194,19 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
             ERR("Authentication not provided");
-            if (conn->send(pw::HTTPResponse::make_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         } else {
             std::vector<std::string> split_auth = pw::string::split_and_trim(req.headers["Proxy-Authorization"], ' ');
             if (split_auth.size() < 2) {
                 ERR("Authorization failed: Bad Proxy-Authorization header");
-                if (conn->send(pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+                if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                     ERR_WEB;
                 return;
             } else if (pw::string::to_lower_copy(split_auth[0]) != "basic") {
                 ERR("Authorization failed: Unsupported authentication scheme");
-                if (conn->send(pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+                if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                     ERR_WEB;
                 return;
             } else {
@@ -194,12 +216,12 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                 std::vector<std::string> split_decoded_auth = pw::string::split(decoded_auth_string, ':');
                 if (split_decoded_auth.size() != 2) {
                     ERR("Authorization failed: Bad username:password combination");
-                    if (conn->send(pw::HTTPResponse::make_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version)) == PN_ERROR)
+                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR)
                         ERR_WEB;
                     return;
                 } else if (split_decoded_auth[1] != password) {
                     ERR("Authorization failed: Incorrect password");
-                    if (conn->send(pw::HTTPResponse::make_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version)) == PN_ERROR)
+                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR)
                         ERR_WEB;
                     return;
                 }
@@ -227,7 +249,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             pw::string::starts_with(req.target, "ws://") ||
             pw::string::starts_with(req.target, "wss://")) {
             ERR("Client attempted use absolute-form target in HTTP CONNECT request");
-            if (conn->send(pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -235,7 +257,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (set_socket_timeout(*conn, (struct timeval) {7200, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE})) == PN_ERROR) {
+            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -245,7 +267,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (split_host.size() > 2) {
             ERR("Failed to parse target of HTTP CONNECT request");
-            if (conn->send(pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         } else if (split_host.size() == 1) {
@@ -254,7 +276,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            if (conn->send(pw::HTTPResponse::make_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -264,7 +286,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send(not_found_page(req.target, pn::universal_strerror())) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -272,7 +294,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, (struct timeval) {7200, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -293,7 +315,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             protocol_len = 7;
         } else {
             ERR("Client (possibly) attempted to make normal HTTP request");
-            if (conn->send(pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -307,7 +329,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             pw::string::to_lower_copy(upgrade_it->second).find("websocket") != std::string::npos &&
             pw::string::to_lower_copy(connection_it->second) == "upgrade") {
             ERR("Client attempted to make absolute-target WebSocket connection");
-            if (conn->send(pw::HTTPResponse::make_basic(501, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(501, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -319,7 +341,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (split_host.size() > 2) {
             ERR("Failed to parse host of absolute-form target HTTP request");
-            if (conn->send(pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         } else if (split_host.size() == 1) {
@@ -328,7 +350,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            if (conn->send(pw::HTTPResponse::make_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -352,7 +374,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send(not_found_page(host, pn::universal_strerror())) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -360,7 +382,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, (struct timeval) {30, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -382,7 +404,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         std::vector<char> proxied_req_data = req.build();
         if (proxy->send(proxied_req_data.data(), proxied_req_data.size()) == PN_ERROR) {
             ERR_NET;
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -391,7 +413,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (resp.parse(*proxy, proxy_buf_receiver) == PN_ERROR) {
             ERR_WEB;
             ERR("Failed to parse HTTP response");
-            if (conn->send(pw::HTTPResponse::make_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version)) == PN_ERROR)
+            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
             return;
         }
