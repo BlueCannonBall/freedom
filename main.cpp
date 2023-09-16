@@ -52,7 +52,7 @@ const time_t running_since = time(nullptr);
 unsigned long long total_requests_received = 0;
 std::unordered_map<std::string, unsigned long long> users;
 
-pw::HTTPResponse stats_page() {
+pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mtx);
     std::ostringstream html;
     html << "<html>";
@@ -85,10 +85,10 @@ pw::HTTPResponse stats_page() {
 
     html << "</body>";
     html << "</html>";
-    return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+    return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
 }
 
-pw::HTTPResponse not_found_page(const std::string& host, const std::string& error_message) {
+pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const std::string& error_message, const std::string& http_version = "HTTP/1.1") {
     std::ostringstream html;
     html << "<html>";
     html << "<head>";
@@ -105,7 +105,7 @@ pw::HTTPResponse not_found_page(const std::string& host, const std::string& erro
 
     html << "</body>";
     html << "</html>";
-    return pw::HTTPResponse(404, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+    return pw::HTTPResponse(status_code, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
 }
 
 int configure_socket(pn::Socket& s) {
@@ -286,7 +286,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn->send(not_found_page(req.target, pn::universal_strerror())) == PN_ERROR)
+            if (conn->send(error_page(404, req.target, pn::universal_strerror(), req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -294,7 +294,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, (struct timeval) {7200, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
+            if (conn->send(error_page(500, req.target, pn::universal_strerror(), req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -358,9 +358,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (split_host[0] == "proxy.info") {
             pw::HTTPResponse resp;
             if (req.target == "/") {
-                resp = stats_page();
+                resp = stats_page(req.http_version);
             } else {
-                resp = pw::HTTPResponse::make_basic(404, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
+                resp = error_page(404, host, req.target + " could not be found", req.http_version);
             }
             std::vector<char> proxied_resp_data = resp.build();
             if (conn->send(proxied_resp_data.data(), proxied_resp_data.size()) == PN_ERROR) {
@@ -374,7 +374,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn->send(not_found_page(host, pn::universal_strerror())) == PN_ERROR)
+            if (conn->send(error_page(404, host, pn::universal_strerror(), req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -382,7 +382,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, (struct timeval) {30, 0}) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
+            if (conn->send(error_page(500, host, pn::universal_strerror(), req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -395,7 +395,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             }
         }
 
-        req.headers["Host"] = std::move(host);
+        req.headers["Host"] = host;
         req.headers["Accept-Encoding"] = "chunked";
         req.headers.insert(CONNECTION_CLOSE);
 
@@ -404,7 +404,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         std::vector<char> proxied_req_data = req.build();
         if (proxy->send(proxied_req_data.data(), proxied_req_data.size()) == PN_ERROR) {
             ERR_NET;
-            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
+            if (conn->send(error_page(500, host, pn::universal_strerror(), req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -413,7 +413,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         if (resp.parse(*proxy, proxy_buf_receiver) == PN_ERROR) {
             ERR_WEB;
             ERR("Failed to parse HTTP response");
-            if (conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
+            if (conn->send(error_page(500, host, pw::universal_strerror(), req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
