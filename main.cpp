@@ -76,7 +76,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
         return a.second > b.second;
     });
     for (const auto& user : user_pairs) {
-        html << "<li>" << pw::escape_html(user.first) << " - " << user.second << " request(s)</li>";
+        html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
     }
     html << "</ol>";
 
