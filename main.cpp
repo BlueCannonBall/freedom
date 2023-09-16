@@ -76,12 +76,12 @@ pw::HTTPResponse stats_page() {
         return a.second > b.second;
     });
     for (const auto& user : user_pairs) {
-        html << "<li>" << user.first << " - " << user.second << " request(s)</li>";
+        html << "<li>" << pw::escape_html(user.first) << " - " << user.second << " request(s)</li>";
     }
     html << "</ol>";
 
     html << "<h2 style=\"position: absolute; bottom: 10px; font-family: serif; color: #FF6666;\">By Charter of His Majesty The King</h2>";
-    html << "<h2 style=\"position: absolute; bottom: 10px; right: 20px; font-family: serif; color: #FF6666;\">Royal Society of Burlington</h2>";
+    html << "<h2 style=\"position: absolute; bottom: 10px; right: 20px; font-family: serif; color: #FF6666;\">Royal Society of Burlington &#x26E8;</h2>";
 
     html << "</body>";
     html << "</html>";
