@@ -247,11 +247,11 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
     stats_mtx.lock();
     ++total_requests_received;
 #ifdef _WIN32
-    struct tm timeinfo = *gmtime(&rawtime);
+    struct tm timeinfo = *localtime(&rawtime);
 #else
     time_t rawtime = time(nullptr);
     struct tm timeinfo;
-    gmtime_r(&rawtime, &timeinfo);
+    localtime_r(&rawtime, &timeinfo);
 #endif
     std::ostringstream ss;
     ss.imbue(std::locale(setlocale(LC_ALL, "C")));
