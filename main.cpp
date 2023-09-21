@@ -2,7 +2,10 @@
 #include "adblock.hpp"
 #include <algorithm>
 #include <cctype>
+#include <clocale>
+#include <ctime>
 #include <iomanip>
+#include <locale>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
@@ -18,15 +21,15 @@
 #define PROXY_AUTHENTICATE_BASIC \
     { "Proxy-Authenticate", "basic" }
 
-#define INFO(msg)                                               \
+#define INFO(message)                                           \
     do {                                                        \
         std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << "Info: " << msg << std::endl;              \
+                  << "Info: " << message << std::endl;          \
     } while (0)
-#define ERR(msg)                                                \
+#define ERR(message)                                            \
     do {                                                        \
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << "Error: " << msg << std::endl;             \
+                  << "Error: " << message << std::endl;         \
     } while (0)
 #define ERR_NET                                                                  \
     do {                                                                         \
@@ -38,10 +41,10 @@
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
                   << pw::universal_strerror() << std::endl;     \
     } while (0)
-#define ERR_CLI(msg)                                            \
+#define ERR_CLI(message)                                        \
     do {                                                        \
         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << "CLI error: " << msg << std::endl;         \
+                  << "CLI error: " << message << std::endl;     \
     } while (0)
 
 std::string password;
@@ -51,6 +54,7 @@ std::mutex stats_mtx;
 const time_t running_since = time(nullptr);
 unsigned long long total_requests_received = 0;
 std::unordered_map<std::string, unsigned long long> users;
+std::unordered_map<std::string, unsigned long long> activity;
 
 pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mtx);
@@ -64,24 +68,77 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<body>";
     html << "<h1 style=\"text-align: center;\">Proxy Statistics</h1>";
 
+    html << "<div style=\"float: left;\">";
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
     html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
 
-    html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
-    html << "<p><strong>Most active users:</strong></p>";
-    html << "<ol>";
-    std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
-    std::sort(user_pairs.begin(), user_pairs.end(), [](const auto& a, const auto& b) {
-        return a.second > b.second;
-    });
-    for (const auto& user : user_pairs) {
-        html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
+    if (!password.empty()) {
+        html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
+        html << "<p><strong>Most active users:</strong></p>";
+        html << "<ol>";
+        std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
+        std::sort(user_pairs.begin(), user_pairs.end(), [](const auto& a, const auto& b) {
+            return a.second > b.second;
+        });
+        for (const auto& user : user_pairs) {
+            html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
+        }
+        html << "</ol>";
     }
-    html << "</ol>";
+    html << "</div>";
+
+    html << "<div style=\"margin: 0; position: absolute; top: 50%; right: 20px; -ms-transform: translate(0, -50%); transform: translate(0, -50%); width: calc(50% - 40px); height: calc(100% - 187px); padding: 10px; background-color: rgb(34, 34, 34); border-radius: 10px;\"><canvas id=\"chart\"></canvas></div>";
 
     html << "<h2 style=\"position: absolute; bottom: 10px; font-family: serif; color: #FF6666;\">By Charter of His Majesty The King</h2>";
     html << "<h2 style=\"position: absolute; bottom: 10px; right: 20px; font-family: serif; color: #FF6666;\">Royal Society of Burlington &#x26E8;</h2>";
+
+    html << "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>";
+    html << "<script>";
+    html << "const labels = [";
+    for (const auto& day : activity) {
+        html << std::quoted(day.first) << ',';
+    }
+    html << "];";
+    html << "const data = [";
+    for (const auto& day : activity) {
+        html << day.second << ',';
+    }
+    html << "];";
+    html << R"delimiter(
+        const ctx = document.getElementById("chart");
+
+        Chart.defaults.color = "rgb(204, 204, 204)";
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels,
+                datasets: [{
+                    label: "# of Requests",
+                    backgroundColor: "#4287F5",
+                    data,
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: "rgb(85, 85, 85)",
+                        },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: "rgb(85, 85, 85)",
+                        },
+                    },
+                },
+            },
+        });
+    )delimiter";
+    html << "</script>";
 
     html << "</body>";
     html << "</html>";
@@ -189,6 +246,25 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
     stats_mtx.lock();
     ++total_requests_received;
+#ifdef _WIN32
+    struct tm timeinfo = *gmtime(&rawtime);
+#else
+    time_t rawtime = time(nullptr);
+    struct tm timeinfo;
+    gmtime_r(&rawtime, &timeinfo);
+#endif
+    std::ostringstream ss;
+    ss.imbue(std::locale(setlocale(LC_ALL, "C")));
+    ss << std::put_time(&timeinfo, "%m/%d/%y");
+    decltype(activity)::iterator day_it;
+    if ((day_it = activity.find(ss.str())) != activity.end()) {
+        ++day_it->second;
+    } else {
+        if (activity.size() >= 180) {
+            activity.clear();
+        }
+        activity[ss.str()] = 1;
+    }
     stats_mtx.unlock();
 
     if (!password.empty()) {
@@ -313,6 +389,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         size_t protocol_len;
         if (pw::string::starts_with(req.target, "http://")) {
             protocol_len = 7;
+        } else if (req.target == "/stats") {
+            if (conn->send(stats_page(req.http_version)) == PN_ERROR)
+                ERR_WEB;
+            return;
         } else {
             ERR("Client (possibly) attempted to make normal HTTP request");
             if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
