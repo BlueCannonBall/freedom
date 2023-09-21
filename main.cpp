@@ -53,6 +53,7 @@ std::string password;
 std::mutex stats_mtx;
 const time_t running_since = time(nullptr);
 unsigned long long total_requests_received = 0;
+unsigned long long ads_blocked = 0;
 std::unordered_map<std::string, unsigned long long> users;
 std::unordered_map<std::string, unsigned long long> activity;
 
@@ -71,6 +72,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<div style=\"float: left;\">";
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
+    html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
     html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
 
     if (!password.empty()) {
@@ -352,7 +354,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
+            stats_mtx.lock();
+            ++ads_blocked;
+            stats_mtx.unlock();
+            if (conn->send(error_page(403, req.target, "Ad detected", req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
@@ -430,7 +435,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
+            stats_mtx.lock();
+            ++ads_blocked;
+            stats_mtx.unlock();
+            if (conn->send(error_page(403, host, "Ad detected", req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
         }
