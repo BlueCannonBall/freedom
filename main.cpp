@@ -63,13 +63,14 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<html>";
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
-    html << "<style>body { margin: 20px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
+    html << "<style>body { padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
     html << "</head>";
 
-    html << "<body>";
-    html << "<h1 style=\"text-align: center;\">Proxy Statistics</h1>";
+    html << "<body style=\"display: grid;\">";
+    html << "<h1 style=\"grid-row-start: 1; margin: 5px; text-align: center;\">Proxy Statistics</h1>";
 
-    html << "<div style=\"float: left;\">";
+    html << "<div style=\"display: flex; grid-row-start: 2;\">";
+    html << "<div style=\"flex: 1; margin: 10px;\"/>";
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
@@ -90,10 +91,13 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     }
     html << "</div>";
 
-    html << "<div style=\"margin: 0; position: absolute; top: 50%; right: 20px; -ms-transform: translate(0, -50%); transform: translate(0, -50%); width: calc(50% - 40px); height: calc(100% - 187px); padding: 10px; background-color: rgb(34, 34, 34); border-radius: 10px;\"><canvas id=\"chart\"></canvas></div>";
+    html << "<div style=\"flex: 1; margin: 10px; padding: 10px; background-color: rgb(34, 34, 34); border-radius: 10px;\"><canvas id=\"chart\"></canvas></div>";
+    html << "</div>";
 
-    html << "<h2 style=\"position: absolute; bottom: 10px; font-family: serif; color: #FF6666;\">By Charter of His Majesty The King</h2>";
-    html << "<h2 style=\"position: absolute; bottom: 10px; right: 20px; font-family: serif; color: #FF6666;\">Royal Society of Burlington &#x26E8;</h2>";
+    html << "<div style=\"display: flex; grid-row-start: 3;\">";
+    html << "<h2 style=\"margin: 5px; text-align: left; flex-grow: 1; font-family: serif; color: #FF6666;\">By Charter of His Majesty The King</h2>";
+    html << "<h2 style=\"margin: 5px; text-align: right; flex-grow: 1; font-family: serif; color: #FF6666;\">Royal Society of Burlington &#x26E8;</h2>";
+    html << "</div>";
 
     html << "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>";
     html << "<script>";
@@ -152,7 +156,7 @@ pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const
     html << "<html>";
     html << "<head>";
     html << "<title>" << host << "</title>";
-    html << "<style>body { margin: 20px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
+    html << "<style>body { padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
     html << "</head>";
 
     html << "<body>";
