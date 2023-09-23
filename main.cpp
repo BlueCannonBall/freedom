@@ -66,7 +66,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<style>body { padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
     html << "</head>";
 
-    html << "<body style=\"display: grid;\">";
+    html << "<body style=\"display: grid; box-sizing: border-box; height: 100%; margin: 0;\">";
     html << "<h1 style=\"grid-row-start: 1; margin: 5px; text-align: center;\">Proxy Statistics</h1>";
 
     html << "<div style=\"display: flex; grid-row-start: 2;\">";
