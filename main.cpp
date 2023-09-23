@@ -5,12 +5,15 @@
 #include <clocale>
 #include <ctime>
 #include <iomanip>
+#include <iostream>
 #include <locale>
+#include <map>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <sys/time.h>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -55,7 +58,7 @@ const time_t running_since = time(nullptr);
 unsigned long long total_requests_received = 0;
 unsigned long long ads_blocked = 0;
 std::unordered_map<std::string, unsigned long long> users;
-std::unordered_map<std::string, unsigned long long> activity;
+std::map<std::string, unsigned long long> activity;
 
 pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mtx);
