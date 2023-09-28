@@ -159,12 +159,12 @@ pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const
     html << "<html>";
     html << "<head>";
     html << "<title>" << host << "</title>";
-    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 0; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
+    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
     html << "</head>";
 
     html << "<body>";
 
-    html << "<div style=\"margin: 0; position: absolute; top: 50%; left: 50%; -ms-transform: translate(-50%, -50%); transform: translate(-50%, -50%); padding: 10px;\">";
+    html << "<div style=\"margin: 0; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);\">";
     html << "<h1 style=\"text-align: center;\">\"" << host << "\" could not be loaded</h1>";
     html << "<p style=\"text-align: center;\"><strong>Error:</strong> " << error_message << "</p>";
     html << "</div>";
