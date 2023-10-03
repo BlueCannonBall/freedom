@@ -53,7 +53,7 @@
 std::string password;
 
 // Stats
-std::mutex stats_mtx;
+std::mutex stats_mutex;
 const time_t running_since = time(nullptr);
 unsigned long long total_requests_received = 0;
 unsigned long long ads_blocked = 0;
@@ -61,7 +61,7 @@ std::unordered_map<std::string, unsigned long long> users;
 std::map<std::string, unsigned long long> activity;
 
 pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
-    std::lock_guard<std::mutex> lock(stats_mtx);
+    std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
     html << "<html>";
     html << "<head>";
@@ -253,7 +253,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         return;
     }
 
-    stats_mtx.lock();
+    stats_mutex.lock();
     ++total_requests_received;
 #ifdef _WIN32
     struct tm timeinfo = *localtime(&rawtime);
@@ -274,7 +274,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         }
         activity[ss.str()] = 1;
     }
-    stats_mtx.unlock();
+    stats_mutex.unlock();
 
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
@@ -311,7 +311,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                     return;
                 }
 
-                stats_mtx.lock();
+                stats_mutex.lock();
                 decltype(users)::iterator user_it;
                 if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
                     ++user_it->second;
@@ -321,7 +321,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
                     }
                     users[split_decoded_auth[0]] = 1;
                 }
-                stats_mtx.unlock();
+                stats_mutex.unlock();
 
                 INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
             }
@@ -361,9 +361,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            stats_mtx.lock();
+            stats_mutex.lock();
             ++ads_blocked;
-            stats_mtx.unlock();
+            stats_mutex.unlock();
             if (conn->send(error_page(403, req.target, "Ad detected", req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
@@ -395,7 +395,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         INFO("Routing connection to " << split_host[0] << ':' << split_host[1]);
         pw::threadpool.schedule([conn, conn_buf_receiver, proxy](void*) mutable {
             route(std::move(conn), conn_buf_receiver, std::move(proxy));
-        });
+        },
+            nullptr,
+            true);
         route(std::move(proxy), proxy_buf_receiver, std::move(conn));
     } else {
         size_t protocol_len;
@@ -442,9 +444,9 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         if (adblock::check_hostname(split_host[0])) {
             INFO("Got ad connection");
-            stats_mtx.lock();
+            stats_mutex.lock();
             ++ads_blocked;
-            stats_mtx.unlock();
+            stats_mutex.unlock();
             if (conn->send(error_page(403, host, "Ad detected", req.http_version)) == PN_ERROR)
                 ERR_WEB;
             return;
@@ -559,7 +561,9 @@ int main(int argc, char** argv) {
             pw::threadpool.schedule([conn](void* data) {
                 pn::tcp::BufReceiver buf_receiver;
                 init_conn(pn::SharedSock<pw::Connection>(conn), buf_receiver);
-            });
+            },
+                nullptr,
+                true);
             return true;
         }) == PN_ERROR) {
         ERR_NET;
