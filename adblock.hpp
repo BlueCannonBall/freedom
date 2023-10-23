@@ -3,7 +3,6 @@
 #include <functional>
 #include <string>
 #include <unordered_set>
-#include <vector>
 
 namespace adblock {
     const extern char* const blocked_hostnames[];
