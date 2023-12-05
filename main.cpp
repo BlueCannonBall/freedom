@@ -2,7 +2,6 @@
 #include "adblock.hpp"
 #include <algorithm>
 #include <cctype>
-#include <clocale>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -63,6 +62,8 @@ std::map<std::string, unsigned long long> activity;
 pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
+    html.imbue(std::locale("en_US.UTF-8"));
+    html << std::fixed << std::setprecision(4);
     html << "<html>";
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
@@ -73,7 +74,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<h1 style=\"margin: 5px; text-align: center;\">Proxy Statistics</h1>";
 
     html << "<div style=\"display: flex; flex: 1; min-height: 0;\">";
-    html << "<div style=\"flex: 1; min-width: 0; margin: 10px;\"/>";
+    html << "<div style=\"flex: 1; min-width: 0; margin: 10px; overflow-y: auto;\"/>";
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
@@ -263,7 +264,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
     localtime_r(&rawtime, &timeinfo);
 #endif
     std::ostringstream ss;
-    ss.imbue(std::locale(setlocale(LC_ALL, "C")));
+    ss.imbue(std::locale("C"));
     ss << std::put_time(&timeinfo, "%m/%d/%y");
     decltype(activity)::iterator day_it;
     if ((day_it = activity.find(ss.str())) != activity.end()) {
