@@ -112,7 +112,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "];";
     html << "const data = [";
     for (const auto& day : activity) {
-        html << day.second << ',';
+        html << std::to_string(day.second) << ',';
     }
     html << "];";
     html << R"delimiter(
