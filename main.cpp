@@ -100,7 +100,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
 
     html << "<div style=\"display: flex;\">";
     html << "<h2 style=\"margin: 5px; text-align: left; flex: 1; color: #FF6666;\">By Charter of His Majesty The King</h2>";
-    html << "<h2 style=\"margin: 5px; text-align: right; flex: 1; color: #FF6666;\">Royal Society of Burlington &#x1F6E1;</h2>";
+    html << "<h2 style=\"margin: 5px; text-align: right; flex: 1; color: #FF6666;\">Royal Society of Burlington &#9876;</h2>";
     html << "</div>";
 
     html << "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>";
