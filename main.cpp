@@ -99,8 +99,8 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "</div>";
 
     html << "<div style=\"display: flex;\">";
-    html << "<h2 style=\"margin: 5px; text-align: left; flex: 1; font-family: serif; color: #FF6666;\">By Charter of His Majesty The King</h2>";
-    html << "<h2 style=\"margin: 5px; text-align: right; flex: 1; font-family: serif; color: #FF6666;\">Royal Society of Burlington &#x26E8;</h2>";
+    html << "<h2 style=\"margin: 5px; text-align: left; flex: 1; color: #FF6666;\">By Charter of His Majesty The King</h2>";
+    html << "<h2 style=\"margin: 5px; text-align: right; flex: 1; color: #FF6666;\">Royal Society of Burlington &#x1F6E1;</h2>";
     html << "</div>";
 
     html << "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>";
@@ -351,7 +351,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
 
         std::vector<std::string> split_host = pw::string::split(req.target, ':');
 
-        if (split_host.size() > 2) {
+        if (split_host.empty() || split_host.size() > 2) {
             ERR("Failed to parse target of HTTP CONNECT request");
             if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
@@ -434,7 +434,7 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
         req.target = std::string(path_begin, req.target.end());
         std::vector<std::string> split_host = pw::string::split(host, ':');
 
-        if (split_host.size() > 2) {
+        if (split_host.empty() || split_host.size() > 2) {
             ERR("Failed to parse host of absolute-form target HTTP request");
             if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR)
                 ERR_WEB;
