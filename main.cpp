@@ -80,7 +80,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
     html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
 
-    if (true) {
+    if (!password.empty()) {
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
         html << "<p><strong>Most active users:</strong></p>";
         html << "<ol>";
