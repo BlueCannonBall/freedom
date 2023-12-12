@@ -92,7 +92,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
             html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
         }
         html << "</ol>";
-        html << "<a onclick=\"changeUsername()\">Change Username</a>";
+        html << "<a href=\"#\" role=\"button\" onclick=\"changeUsername(); return false;\">Change Username</a>";
     }
     html << "</div>";
 
