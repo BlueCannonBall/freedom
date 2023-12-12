@@ -67,7 +67,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<html>";
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
-    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
+    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF } a { color: #4287F5; text-decoration: underline; }</style>";
     html << "</head>";
 
     html << "<body style=\"display: flex; flex-direction: column; height: calc(100% - 20px);\">";
@@ -80,7 +80,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
     html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
 
-    if (!password.empty()) {
+    if (true) {
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
         html << "<p><strong>Most active users:</strong></p>";
         html << "<ol>";
@@ -92,6 +92,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
             html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
         }
         html << "</ol>";
+        html << "<a onclick=\"changeUsername()\">Change Username</a>";
     }
     html << "</div>";
 
@@ -147,6 +148,10 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
                 },
             },
         });
+
+        function changeUsername() {
+            fetch("http://proxy.info/change_username");
+        }
     )delimiter";
     html << "</script>";
 
@@ -160,7 +165,7 @@ pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const
     html << "<html>";
     html << "<head>";
     html << "<title>" << host << "</title>";
-    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF }</style>";
+    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF } a { color: #4287F5; text-decoration: underline; }</style>";
     html << "</head>";
 
     html << "<body>";
@@ -457,6 +462,10 @@ void init_conn(pn::SharedSock<pw::Connection> conn, pn::tcp::BufReceiver& conn_b
             pw::HTTPResponse resp;
             if (req.target == "/") {
                 resp = stats_page(req.http_version);
+            } else if (req.target == "/change_username") {
+                if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR)
+                    ERR_WEB;
+                return;
             } else {
                 resp = error_page(404, host, req.target + " could not be found", req.http_version);
             }
