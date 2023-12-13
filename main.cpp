@@ -63,7 +63,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
     html.imbue(std::locale("en_US.UTF-8"));
-    html << std::fixed << std::setprecision(4);
+    html << std::fixed << std::setprecision(3);
     html << "<html>";
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
