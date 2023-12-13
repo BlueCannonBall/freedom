@@ -1,16 +1,13 @@
 # Freedom
 A simple HTTP proxy server written in C++.
 
-## Dependencies
-Boost, for string manipulation. (HTTP sucks)
-
 ## Installation
-```
+```sh
 $ make
 $ sudo make install
 ```
 
 ## Usage
-```
+```sh
 $ freedom <PORT> [PASSWORD]
 ```
