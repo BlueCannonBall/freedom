@@ -70,7 +70,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF } a { color: #4287F5; }</style>";
     html << "</head>";
 
-    html << "<body style=\"display: flex; flex-direction: column; height: calc(100% - 20px);\">";
+    html << "<body style=\"display: flex; flex-direction: column; box-sizing: border-box; height: 100%;\">";
     html << "<h1 style=\"margin: 5px; text-align: center;\">Proxy Statistics</h1>";
 
     html << "<div style=\"display: flex; flex: 1; min-height: 0;\">";
