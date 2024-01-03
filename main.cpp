@@ -78,7 +78,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
-    html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
+    html << "<p><strong>Requests per second:</strong> " << (float) total_requests_received / (time(nullptr) - running_since) << "</p>";
 
     if (!password.empty()) {
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
