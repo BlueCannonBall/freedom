@@ -66,14 +66,14 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
     html.imbue(std::locale("en_US.UTF-8"));
-    html << std::fixed << std::setprecision(4);
+    html << std::fixed << std::setprecision(3);
     html << "<html>";
     html << "<head>";
     html << "<title>Proxy Statistics</title>";
-    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF } a { color: #4287F5; text-decoration: underline; }</style>";
+    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF; } a { color: #4287F5; }</style>";
     html << "</head>";
 
-    html << "<body style=\"display: flex; flex-direction: column; height: calc(100% - 20px);\">";
+    html << "<body style=\"display: flex; flex-direction: column; box-sizing: border-box; height: 100%;\">";
     html << "<h1 style=\"margin: 5px; text-align: center;\">Proxy Statistics</h1>";
 
     html << "<div style=\"display: flex; flex: 1; min-height: 0;\">";
@@ -81,7 +81,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << total_requests_received << "</p>";
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
-    html << "<p><strong>Requests per second:</strong> " << ((float) total_requests_received / (time(nullptr) - running_since)) << "</p>";
+    html << "<p><strong>Requests per second:</strong> " << (float) total_requests_received / (time(nullptr) - running_since) << "</p>";
 
     if (!password.empty()) {
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
@@ -95,6 +95,7 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
             html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
         }
         html << "</ol>";
+
         html << "<p><a href=\"#\" role=\"button\" onclick=\"changeUsername(); return false;\">Change Username</a></p>";
     }
     html << "</div>";
@@ -168,7 +169,7 @@ pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const
     html << "<html>";
     html << "<head>";
     html << "<title>" << host << "</title>";
-    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF } a { color: #4287F5; }</style>";
+    html << "<style>html { margin: 0; padding: 0; } body { margin: 0; padding: 10px; font-family: sans-serif; color: rgb(204, 204, 204); background-color: rgb(17, 17, 17); } h1, h2, h3, h4, h5, h6 { color: #FFFFFF; } a { color: #4287F5; }</style>";
     html << "</head>";
 
     html << "<body>";
