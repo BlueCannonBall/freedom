@@ -204,10 +204,9 @@ int set_socket_timeout(pn::Socket& socket, std::chrono::milliseconds timeout_dur
 #ifdef _WIN32
     DWORD timeout = timeout_duration.count();
 #else
-    struct timeval timeout {
-        .tv_sec = timeout_duration.count() / 1000,
-        .tv_usec = (timeout_duration.count() % 1000) * 1000,
-    };
+    struct timeval timeout;
+    timeout.tv_sec = timeout_duration.count() / 1000;
+    timeout.tv_usec = (timeout_duration.count() % 1000) * 1000;
 #endif
     if (socket.setsockopt(SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof timeout) == PN_ERROR) {
         return PN_ERROR;

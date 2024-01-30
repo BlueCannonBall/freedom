@@ -7,73 +7,73 @@ libraries := -lssl -lcrypto
 default: freedom
 .PHONY: default
 
-obj/main.o: ./main.cpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp ./adblock.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
-	@mkdir -p obj
-	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
-
 obj/adblock.o: ./adblock.cpp ./adblock.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
+
+obj/main.o: ./main.cpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp ./adblock.hpp
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
+	@mkdir -p obj
+	@$(compiler) -c $< $(compilation_flags) -o $@
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
 obj/server.o: Polyweb/server.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
 obj/client.o: Polyweb/client.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
-
-obj/websocket.o: Polyweb/websocket.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
-	@mkdir -p obj
-	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
 obj/string.o: Polyweb/string.cpp Polyweb/string.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
 obj/polyweb.o: Polyweb/polyweb.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
+
+obj/websocket.o: Polyweb/websocket.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
+	@mkdir -p obj
+	@$(compiler) -c $< $(compilation_flags) -o $@
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
 obj/secure_sockets.o: Polyweb/Polynet/secure_sockets.cpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/polynet.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
 obj/polynet.o: Polyweb/Polynet/polynet.cpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp
-	@echo -e '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...'
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
-freedom: obj/main.o obj/adblock.o obj/server.o obj/client.o obj/websocket.o obj/string.o obj/polyweb.o obj/secure_sockets.o obj/polynet.o
-	@echo -e '\033[1m[POLYBUILD]\033[0m Building $@...'
+freedom: obj/adblock.o obj/main.o obj/server.o obj/client.o obj/string.o obj/polyweb.o obj/websocket.o obj/secure_sockets.o obj/polynet.o
+	@printf '\033[1m[POLYBUILD]\033[0m Building $@...\n'
 	@$(compiler) $^ $(compilation_flags) $(libraries) -o $@
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished building $@!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished building $@!\n'
 
 clean:
-	@echo -e '\033[1m[POLYBUILD]\033[0m Deleting freedom and obj...'
+	@printf '\033[1m[POLYBUILD]\033[0m Deleting freedom and obj...\n'
 	@rm -rf freedom obj
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished deleting freedom and obj!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished deleting freedom and obj!\n'
 .PHONY: clean
 
 install:
-	@echo -e '\033[1m[POLYBUILD]\033[0m Copying freedom to /usr/local/bin...'
+	@printf '\033[1m[POLYBUILD]\033[0m Copying freedom to /usr/local/bin...\n'
 	@cp freedom /usr/local/bin
-	@echo -e '\033[1m[POLYBUILD]\033[0m Finished copying freedom to /usr/local/bin!'
+	@printf '\033[1m[POLYBUILD]\033[0m Finished copying freedom to /usr/local/bin!\n'
 .PHONY: install
