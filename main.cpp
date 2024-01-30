@@ -242,7 +242,7 @@ void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_re
 }
 
 void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn_buf_receiver) {
-    if (set_socket_timeout(*conn, std::chrono::seconds(60)) == PN_ERROR) {
+    if (set_socket_timeout(*conn, std::chrono::seconds(30)) == PN_ERROR) {
         ERR_NET;
         ERR("Failed to configure socket");
         conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
