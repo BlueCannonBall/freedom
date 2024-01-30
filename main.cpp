@@ -466,9 +466,9 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         if (url_info.hostname() == "proxy.info") {
             pw::HTTPResponse resp;
-            if (req.target == "/") {
+            if (url_info.path == "/") {
                 resp = stats_page(req.http_version);
-            } else if (req.target == "/change_username") {
+            } else if (url_info.path == "/change_username") {
                 if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
                     ERR_WEB;
                 }
