@@ -1,0 +1,9 @@
+[paths]
+output = "freedom"
+source = [".", "Polyweb", "Polyweb/Polynet"]
+artifact = "obj"
+install = "/usr/local/bin"
+
+[options]
+compilation-flags = "-Wall -std=c++14 -O3 -pthread"
+libraries = ["ssl", "crypto"]
