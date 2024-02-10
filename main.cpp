@@ -484,13 +484,15 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             return;
         }
 
+        // Prepare request
+        req.target = url_info.path;
         req.headers["Accept-Encoding"] = "chunked";
         req.headers.insert(CONNECTION_CLOSE);
 
         INFO("Routing HTTP request to " << url_info.host);
 
         pw::HTTPResponse resp;
-        if (pw::fetch(req.method, req.target, resp, std::move(req.body), std::move(req.headers), {}, 3, req.http_version) == PN_ERROR) {
+        if (pw::fetch(url_info.hostname(), url_info.port(), url_info.scheme == "https", req, resp) == PN_ERROR) {
             if (conn->send(error_page(400, url_info.host, pw::universal_strerror(), req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
