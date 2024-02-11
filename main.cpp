@@ -62,10 +62,21 @@ unsigned long long ads_blocked = 0;
 std::unordered_map<std::string, unsigned long long> users;
 std::map<std::string, unsigned long long> activity;
 
+class CommaNumPunct : public std::numpunct<char> {
+protected:
+    char do_thousands_sep() const override {
+        return ',';
+    }
+
+    std::string do_grouping() const override {
+        return "\03";
+    }
+};
+
 pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
-    html.imbue(std::locale("en_US.UTF-8"));
+    html.imbue(std::locale(std::locale(), new CommaNumPunct()));
     html << std::fixed << std::setprecision(3);
     html << "<html>";
     html << "<head>";
@@ -272,10 +283,10 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
     stats_mutex.lock();
     ++total_requests_received;
+    time_t rawtime = time(nullptr);
 #ifdef _WIN32
     struct tm timeinfo = *localtime(&rawtime);
 #else
-    time_t rawtime = time(nullptr);
     struct tm timeinfo;
     localtime_r(&rawtime, &timeinfo);
 #endif
@@ -437,7 +448,10 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         pw::URLInfo url_info;
         if (url_info.parse(req.target) == PN_ERROR) {
             ERR_WEB;
-            ERR("Failed to parse URL");
+            ERR("Failed to parse URL: " << req.target);
+            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                ERR_WEB;
+            }
             return;
         }
 
@@ -477,8 +491,8 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 resp = error_page(404, url_info.host, req.target + " could not be found", req.http_version);
             }
 
-            if (conn->send(resp) == PN_ERROR) {
-                ERR_NET;
+            if (conn->send(resp, req.method == "HEAD") == PN_ERROR) {
+                ERR_WEB;
             }
 
             return;
@@ -493,7 +507,9 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         pw::HTTPResponse resp;
         if (pw::fetch(url_info.hostname(), url_info.port(), url_info.scheme == "https", req, resp) == PN_ERROR) {
-            if (conn->send(error_page(400, url_info.host, pw::universal_strerror(), req.http_version)) == PN_ERROR) {
+            ERR_WEB;
+            ERR("Failed to perform HTTP request to " << url_info.host);
+            if (conn->send(error_page(500, url_info.host, pw::universal_strerror(), req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -506,7 +522,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         }
 
         if (conn->send(resp) == PN_ERROR) {
-            ERR_NET;
+            ERR_WEB;
             return;
         }
     }
