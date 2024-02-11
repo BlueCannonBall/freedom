@@ -62,7 +62,7 @@ unsigned long long ads_blocked = 0;
 std::unordered_map<std::string, unsigned long long> users;
 std::map<std::string, unsigned long long> activity;
 
-class CommaNumPunct : public std::numpunct<char> {
+class CommaNumpunct : public std::numpunct<char> {
 protected:
     char do_thousands_sep() const override {
         return ',';
@@ -76,7 +76,7 @@ protected:
 pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
-    html.imbue(std::locale(std::locale(), new CommaNumPunct()));
+    html.imbue(std::locale(std::locale(), new CommaNumpunct));
     html << std::fixed << std::setprecision(3);
     html << "<html>";
     html << "<head>";
