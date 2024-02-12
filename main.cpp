@@ -122,13 +122,13 @@ pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1") {
     html << "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>";
     html << "<script>";
     html << "const labels = [";
-    for (const auto& day : activity) {
-        html << std::quoted(day.first) << ',';
+    for (const auto& date : activity) {
+        html << std::quoted(date.first) << ',';
     }
     html << "];";
     html << "const data = [";
-    for (const auto& day : activity) {
-        html << std::to_string(day.second) << ',';
+    for (const auto& date : activity) {
+        html << std::to_string(date.second) << ',';
     }
     html << "];";
     html << R"delimiter(
@@ -231,19 +231,22 @@ int set_socket_timeout(pn::Socket& socket, std::chrono::milliseconds timeout_dur
 void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_receiver, pn::WeakSocket<pn::tcp::Connection> b) {
     char buf[UINT16_MAX];
     for (;;) {
-        ssize_t read_result;
-        if ((read_result = a->recv(buf, UINT16_MAX)) == PN_ERROR) {
+        long recv_result;
+        if ((recv_result = a->recv(buf, UINT16_MAX)) == PN_ERROR) {
             ERR_NET;
             break;
-        } else if (read_result == 0) {
+        } else if (recv_result == 0) {
             INFO("Connection closed");
             break;
         }
 
         pn::SharedSocket<pn::tcp::Connection> b_locked;
         if ((b_locked = b.lock())) {
-            if (b_locked->send(buf, read_result) == PN_ERROR) {
+            long send_result;
+            if ((send_result = b_locked->send(buf, recv_result)) == PN_ERROR) {
                 ERR_NET;
+                break;
+            } else if (send_result != recv_result) {
                 break;
             }
         } else {
@@ -293,9 +296,9 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
     std::ostringstream ss;
     ss.imbue(std::locale("C"));
     ss << std::put_time(&timeinfo, "%m/%d/%y");
-    decltype(activity)::iterator day_it;
-    if ((day_it = activity.find(ss.str())) != activity.end()) {
-        ++day_it->second;
+    decltype(activity)::iterator date_it;
+    if ((date_it = activity.find(ss.str())) != activity.end()) {
+        ++date_it->second;
     } else {
         if (activity.size() >= 180) {
             activity.clear();
