@@ -241,7 +241,7 @@ void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_re
         }
 
         pn::SharedSocket<pn::tcp::Connection> b_locked;
-        if ((b_locked = b.lock())) {
+        if (pn::SharedSocket<pn::tcp::Connection> b_locked = b.lock()) {
             long send_result;
             if ((send_result = b_locked->send(buf, recv_result)) == PN_ERROR) {
                 ERR_NET;
