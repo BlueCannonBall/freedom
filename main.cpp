@@ -508,7 +508,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         INFO("Routing HTTP request to " << url_info.host);
 
         pw::HTTPResponse resp;
-        if (pw::fetch(url_info.hostname(), url_info.port(), url_info.scheme == "https", req, resp) == PN_ERROR) {
+        if (pw::fetch(url_info.hostname(), url_info.port(), url_info.scheme == "https", req, resp, {}, 0) == PN_ERROR) {
             ERR_WEB;
             ERR("Failed to perform HTTP request to " << url_info.host);
             if (conn->send(error_page(500, url_info.host, pw::universal_strerror(), req.http_version)) == PN_ERROR) {
@@ -571,7 +571,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    adblock::quit();
     pn::quit();
     return 0;
 }
