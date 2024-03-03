@@ -7,7 +7,7 @@ libraries := -lssl -lcrypto
 default: freedom
 .PHONY: default
 
-obj/adblock.o: ./adblock.cpp ./adblock.hpp
+obj/adblock.o: ./adblock.cpp ./adblock.hpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
