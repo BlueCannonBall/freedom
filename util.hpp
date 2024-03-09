@@ -79,8 +79,8 @@ public:
     Timer& operator=(Timer&& timer) {
         if (this != &timer) {
             reset(timer.done_cb);
+            timer.done_cb = DoneCallback();
         }
-        timer.done_cb = DoneCallback();
         return *this;
     }
 
