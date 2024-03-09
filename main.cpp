@@ -95,7 +95,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         return;
     }
 
-    Timer<> timer([](std::chrono::steady_clock::duration duration) {
+    Timer<> timer([](auto duration) {
         std::lock_guard<std::mutex> lock(stats_mutex);
         response_time += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
     });
