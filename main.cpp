@@ -289,7 +289,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             return;
         }
 
-        if (url_info.hostname() == "proxy.info") {
+        if (url_info.hostname() == "proxy.info" || url_info.hostname() == "stats.gov") {
             pw::HTTPResponse resp;
             if (url_info.path == "/") {
                 resp = stats_page(req.http_version);
