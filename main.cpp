@@ -1,6 +1,6 @@
 #include "Polyweb/polyweb.hpp"
 #include "adblock.hpp"
-#include "stats.hpp"
+#include "pages.hpp"
 #include "util.hpp"
 #include <chrono>
 #include <iomanip>
@@ -95,9 +95,9 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         return;
     }
 
-    Timer<std::chrono::milliseconds> timer([](std::chrono::milliseconds duration) {
+    Timer<> timer([](std::chrono::steady_clock::duration duration) {
         std::lock_guard<std::mutex> lock(stats_mutex);
-        response_time += duration;
+        response_time += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
     });
 
     stats_mutex.lock();
@@ -239,6 +239,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             ERR_WEB;
             return;
         }
+        timer.done();
 
         INFO("Routing connection to " << split_host[0] << ':' << split_host[1]);
         pw::threadpool.schedule([conn, conn_buf_receiver, proxy](void*) mutable {

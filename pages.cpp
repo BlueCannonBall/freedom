@@ -1,4 +1,4 @@
-#include "stats.hpp"
+#include "pages.hpp"
 #include "Polyweb/polyweb.hpp"
 #include "util.hpp"
 #include <algorithm>
@@ -28,7 +28,7 @@ protected:
 pw::HTTPResponse stats_page(const std::string& http_version) {
     std::lock_guard<std::mutex> lock(stats_mutex);
     std::ostringstream html;
-    html.imbue(std::locale(std::locale(), new CommaNumpunct));
+    html.imbue(std::locale(std::locale("C"), new CommaNumpunct));
     html << std::fixed << std::setprecision(3);
     html << "<html>";
     html << "<head>";

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Polyweb/polyweb.hpp"
 #include <chrono>
 #include <ctime>

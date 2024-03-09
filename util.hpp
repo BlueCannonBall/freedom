@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Polyweb/Polynet/polynet.hpp"
 #include <chrono>
 #include <iomanip>
@@ -59,15 +61,28 @@ inline std::string get_date(time_t rawtime = time(nullptr)) {
     return ss.str();
 }
 
-template <typename T, typename DoneCallback = std::function<void(T)>, typename Clock = std::chrono::steady_clock>
+template <typename Clock = std::chrono::steady_clock, typename DoneCallback = std::function<void(typename Clock::duration)>>
 class Timer {
-public:
+protected:
     typename Clock::time_point start_time;
     DoneCallback done_cb;
 
+public:
+    Timer() = default;
     Timer(DoneCallback done_cb):
         start_time(Clock::now()),
         done_cb(done_cb) {}
+    Timer(Timer&& timer) {
+        *this = std::move(timer);
+    }
+
+    Timer& operator=(Timer&& timer) {
+        if (this != &timer) {
+            reset(timer.done_cb);
+        }
+        timer.done_cb = DoneCallback();
+        return *this;
+    }
 
     ~Timer() {
         done();
