@@ -44,8 +44,8 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
     html << "<p><strong>Requests received:</strong> " << requests_received << "</p>";
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
-    html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_received << "ms</p>";
     html << "<p><strong>Requests per second:</strong> " << (float) requests_received / (time(nullptr) - running_since) << "</p>";
+    html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_received << "ms</p>";
 
     if (!users.empty()) {
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
