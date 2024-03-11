@@ -10,7 +10,7 @@
 
 extern std::mutex stats_mutex;
 extern const time_t running_since;
-extern unsigned long long requests_received;
+extern unsigned long long requests_handled;
 extern unsigned long long ads_blocked;
 extern std::chrono::milliseconds response_time;
 extern std::unordered_map<std::string, unsigned long long> users;

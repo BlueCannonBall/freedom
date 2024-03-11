@@ -67,10 +67,17 @@ void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_re
 }
 
 void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn_buf_receiver) {
+    Timer<> timer([](auto duration) {
+        std::lock_guard<std::mutex> lock(stats_mutex);
+        response_time += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+        ++requests_handled;
+    });
+
     if (set_socket_timeout(*conn, std::chrono::seconds(30)) == PN_ERROR) {
         ERR_NET;
         ERR("Failed to configure socket");
         conn->send_basic(500, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+        timer.release();
         return;
     }
 
@@ -92,16 +99,11 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             throw std::logic_error("Invalid error");
         }
         conn->send_basic(resp_status_code, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE});
+        timer.release();
         return;
     }
 
-    Timer<> timer([](auto duration) {
-        std::lock_guard<std::mutex> lock(stats_mutex);
-        response_time += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
-    });
-
     stats_mutex.lock();
-    ++requests_received;
     decltype(activity)::iterator date_it;
     std::string date = get_date();
     if ((date_it = activity.find(date)) != activity.end()) {

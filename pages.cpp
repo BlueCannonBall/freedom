@@ -8,7 +8,7 @@
 
 std::mutex stats_mutex;
 const time_t running_since = time(nullptr);
-unsigned long long requests_received = 0;
+unsigned long long requests_handled = 0;
 unsigned long long ads_blocked = 0;
 std::chrono::milliseconds response_time = std::chrono::milliseconds::zero();
 std::unordered_map<std::string, unsigned long long> users;
@@ -42,10 +42,10 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
     html << "<div style=\"display: flex; flex: 1; min-height: 0;\">";
     html << "<div style=\"flex: 1; min-width: 0; margin: 10px; overflow-y: auto;\"/>";
     html << "<p><strong>Running since:</strong> " << pw::build_date(running_since) << "</p>";
-    html << "<p><strong>Requests received:</strong> " << requests_received << "</p>";
+    html << "<p><strong>Requests handled:</strong> " << requests_handled << "</p>";
     html << "<p><strong>Ads blocked:</strong> " << ads_blocked << "</p>";
-    html << "<p><strong>Requests per second:</strong> " << (float) requests_received / (time(nullptr) - running_since) << "</p>";
-    html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_received << "ms</p>";
+    html << "<p><strong>Requests per second:</strong> " << (float) requests_handled / (time(nullptr) - running_since) << "</p>";
+    html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_handled << "ms</p>";
 
     if (!users.empty()) {
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
