@@ -2,11 +2,8 @@
 #include "adblock.hpp"
 #include "pages.hpp"
 #include "util.hpp"
-#include <chrono>
 #include <iomanip>
 #include <iostream>
-#include <mutex>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
