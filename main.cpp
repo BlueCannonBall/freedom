@@ -148,7 +148,20 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                         ERR_WEB;
                     }
                     return;
-                } else if (split_decoded_auth[1] == admin_password) {
+                }
+
+                // Check if this user is banned
+                auto bans = get_bans();
+                if (bans.count(split_decoded_auth[0])) {
+                    ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
+                    if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
+                    }
+                    return;
+                }
+
+                // Check if password is correct
+                if (split_decoded_auth[1] == admin_password) {
                     admin = true;
                 } else if (split_decoded_auth[1] != password) {
                     ERR("Authorization failed: Incorrect password");

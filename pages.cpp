@@ -69,12 +69,14 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
         html << "</ol>";
 
-        html << "<p><strong>Banned users:</strong></p>";
-        html << "<ol>";
-        for (const auto& username : bans) {
-            html << "<li>" << pw::escape_xml(username) << " <a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a></li>";
+        if (!bans.empty()) {
+            html << "<p><strong>Banned users:</strong></p>";
+            html << "<ol>";
+            for (const auto& username : bans) {
+                html << "<li>" << pw::escape_xml(username) << " <a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a></li>";
+            }
+            html << "</ol>";
         }
-        html << "</ol>";
 
         html << "<p><a href=\"#\" role=\"button\" onclick=\"changeUsername(); return false;\">Change Username</a></p>";
     }
