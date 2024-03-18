@@ -1,5 +1,6 @@
 #include "pages.hpp"
 #include "Polyweb/polyweb.hpp"
+#include "bans.hpp"
 #include "util.hpp"
 #include <algorithm>
 #include <iomanip>
@@ -48,6 +49,8 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
     html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_handled << "ms</p>";
 
     if (!users.empty()) {
+        auto bans = get_bans();
+
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
         html << "<p><strong>Most active users:</strong></p>";
         html << "<ol>";
@@ -56,7 +59,20 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
             return a.second > b.second;
         });
         for (const auto& user : user_pairs) {
-            html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s)</li>";
+            html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s) ";
+            if (bans.count(user.first)) {
+                html << "<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(user.first) << "'); return false;\">Unban</a>";
+            } else {
+                html << "<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::escape_xml(user.first) << "'); return false;\">Ban</a>";
+            }
+            html << "</li>";
+        }
+        html << "</ol>";
+
+        html << "<p><strong>Banned users:</strong></p>";
+        html << "<ol>";
+        for (const auto& username : bans) {
+            html << "<li>" << pw::escape_xml(username) << " <a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a></li>";
         }
         html << "</ol>";
 
@@ -118,7 +134,19 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         });
 
         function changeUsername() {
-            fetch("http://proxy.info/change_username");
+            fetch("http://stats.gov/change_username");
+        }
+
+        function ban(username) {
+            fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
+                method: "PUT",
+            }).then(window.location.reload);
+        }
+
+        function unban(username) {
+            fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
+                method: "PUT",
+            }).then(window.location.reload);
         }
     )delimiter";
     html << "</script>";

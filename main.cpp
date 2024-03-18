@@ -1,5 +1,6 @@
 #include "Polyweb/polyweb.hpp"
 #include "adblock.hpp"
+#include "bans.hpp"
 #include "pages.hpp"
 #include "util.hpp"
 #include <iomanip>
@@ -36,6 +37,7 @@
     }
 
 std::string password;
+std::string admin_password;
 
 void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_receiver, pn::WeakSocket<pn::tcp::Connection> b) {
     char buf[UINT16_MAX];
@@ -113,6 +115,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
     }
     stats_mutex.unlock();
 
+    bool admin = false;
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
             ERR("Authentication not provided");
@@ -145,6 +148,8 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                         ERR_WEB;
                     }
                     return;
+                } else if (split_decoded_auth[1] == admin_password) {
+                    admin = true;
                 } else if (split_decoded_auth[1] != password) {
                     ERR("Authorization failed: Incorrect password");
                     if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
@@ -248,7 +253,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             true);
         route(std::move(proxy), proxy_buf_receiver, std::move(conn));
     } else {
-        if (req.target == "/stats") {
+        if (password.empty() && req.target == "/stats") {
             if (conn->send(stats_page(req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
@@ -288,13 +293,47 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             return;
         }
 
-        if (url_info.hostname() == "proxy.info" || url_info.hostname() == "stats.gov") {
+        if ((password.empty() || admin) &&
+            (url_info.hostname() == "proxy.info" ||
+                url_info.hostname() == "stats.gov")) {
             pw::HTTPResponse resp;
             if (url_info.path == "/") {
                 resp = stats_page(req.http_version);
             } else if (url_info.path == "/change_username") {
                 if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
                     ERR_WEB;
+                }
+                return;
+            } else if (url_info.path == "/ban") {
+                pw::QueryParameters::map_type::const_iterator username_it;
+                if ((username_it = url_info.query_parameters->find("username")) != url_info.query_parameters->end()) {
+                    auto bans = get_bans();
+                    bans.insert(username_it->second);
+                    set_bans(bans);
+
+                    if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
+                    }
+                } else {
+                    if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
+                    }
+                }
+                return;
+            } else if (url_info.path == "/unban") {
+                pw::QueryParameters::map_type::const_iterator username_it;
+                if ((username_it = url_info.query_parameters->find("username")) != url_info.query_parameters->end()) {
+                    auto bans = get_bans();
+                    bans.erase(username_it->second);
+                    set_bans(bans);
+
+                    if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
+                    }
+                } else {
+                    if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
+                    }
                 }
                 return;
             } else {
@@ -347,6 +386,9 @@ int main(int argc, char* argv[]) {
 
     if (argc >= 3) {
         password = argv[2];
+        if (argc >= 4) {
+            admin_password = argv[3];
+        }
     }
 
     std::cout << "Cross-platform networking brought to you by:\n";
