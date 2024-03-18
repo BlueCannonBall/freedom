@@ -319,10 +319,11 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 return;
             } else if (url_info.path == "/ban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
-                if ((username_it = url_info.query_parameters->find("username")) != url_info.query_parameters->end()) {
+                if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
                     auto bans = get_bans();
                     bans.insert(username_it->second);
                     set_bans(bans);
+                    INFO("User " << std::quoted(username_it->second) << " has been BANNED");
 
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
@@ -335,10 +336,11 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 return;
             } else if (url_info.path == "/unban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
-                if ((username_it = url_info.query_parameters->find("username")) != url_info.query_parameters->end()) {
+                if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
                     auto bans = get_bans();
                     bans.erase(username_it->second);
                     set_bans(bans);
+                    INFO("User " << std::quoted(username_it->second) << " has been unbanned");
 
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
