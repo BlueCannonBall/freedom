@@ -49,9 +49,11 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
     html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_handled << "ms</p>";
 
     if (!users.empty()) {
+        ban_mutex.lock();
         auto bans = get_bans();
+        ban_mutex.unlock();
 
-        html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
+        html << "<p><strong># of users:</strong> " << users.size() << "</p>";
         html << "<p><strong>Most active users:</strong></p>";
         html << "<ol>";
         std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
@@ -69,13 +71,14 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
         html << "</ol>";
 
+        html << "<p><strong># of banned users:</strong> " << bans.size() << "</p>";
         if (!bans.empty()) {
             html << "<p><strong>Banned users:</strong></p>";
-            html << "<ol>";
+            html << "<ul>";
             for (const auto& username : bans) {
                 html << "<li>" << pw::escape_xml(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a>)</li>";
             }
-            html << "</ol>";
+            html << "</ul>";
         }
 
         html << "<p><a href=\"#\" role=\"button\" onclick=\"changeUsername(); return false;\">Change Username</a></p>";
