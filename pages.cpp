@@ -142,13 +142,13 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         function ban(username) {
             fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
                 method: "PUT",
-            }).then(window.location.reload);
+            }).then(resp => window.location.reload());
         }
 
         function unban(username) {
             fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
                 method: "PUT",
-            }).then(window.location.reload);
+            }).then(resp => window.location.reload());
         }
     )delimiter";
     html << "</script>";
