@@ -147,7 +147,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
 
         function unban(username) {
             fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
-                method: "PUT",
+                method: "DELETE",
             }).then(resp => window.location.reload());
         }
     )delimiter";
