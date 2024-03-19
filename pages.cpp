@@ -61,9 +61,9 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         for (const auto& user : user_pairs) {
             html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s) ";
             if (bans.count(user.first)) {
-                html << "<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(user.first) << "'); return false;\">Unban</a>";
+                html << "(<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(user.first) << "'); return false;\">Unban</a>)";
             } else {
-                html << "<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::escape_xml(user.first) << "'); return false;\">Ban</a>";
+                html << "(<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::escape_xml(user.first) << "'); return false;\">Ban</a>)";
             }
             html << "</li>";
         }
@@ -73,7 +73,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
             html << "<p><strong>Banned users:</strong></p>";
             html << "<ol>";
             for (const auto& username : bans) {
-                html << "<li>" << pw::escape_xml(username) << " <a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a></li>";
+                html << "<li>" << pw::escape_xml(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a>)</li>";
             }
             html << "</ol>";
         }
