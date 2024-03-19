@@ -79,6 +79,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
 
         html << "<p><a href=\"#\" role=\"button\" onclick=\"changeUsername(); return false;\">Change Username</a></p>";
+        html << "<p><a href=\"#\" role=\"button\" onclick=\"ban(prompt('Enter a username to ban')); return false;\">Ban Another User</a></p>";
     }
     html << "</div>";
 
@@ -140,9 +141,11 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
 
         function ban(username) {
-            fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
-                method: "PUT",
-            }).then(resp => window.location.reload());
+            if (username) {
+                fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
+                    method: "PUT",
+                }).then(resp => window.location.reload());
+            }
         }
 
         function unban(username) {
