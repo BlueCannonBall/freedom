@@ -7,13 +7,13 @@ libraries := -lssl -lcrypto
 default: freedom
 .PHONY: default
 
-obj/adblock.o: ./adblock.cpp ./adblock.hpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp
+obj/bans.o: ./bans.cpp ./bans.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
-obj/main.o: ./main.cpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp ./adblock.hpp ./bans.hpp ./pages.hpp ./util.hpp
+obj/adblock.o: ./adblock.cpp ./adblock.hpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
@@ -25,19 +25,7 @@ obj/pages.o: ./pages.cpp ./pages.hpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/pol
 	@$(compiler) -c $< $(compilation_flags) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
-obj/bans.o: ./bans.cpp ./bans.hpp
-	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
-	@mkdir -p obj
-	@$(compiler) -c $< $(compilation_flags) -o $@
-	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
-
-obj/client.o: Polyweb/client.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
-	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
-	@mkdir -p obj
-	@$(compiler) -c $< $(compilation_flags) -o $@
-	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
-
-obj/polyweb.o: Polyweb/polyweb.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
+obj/main.o: ./main.cpp ./Polyweb/polyweb.hpp ./Polyweb/Polynet/polynet.hpp ./Polyweb/Polynet/secure_sockets.hpp ./Polyweb/Polynet/smart_sockets.hpp ./Polyweb/string.hpp ./Polyweb/threadpool.hpp ./adblock.hpp ./bans.hpp ./pages.hpp ./util.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
@@ -49,7 +37,19 @@ obj/server.o: Polyweb/server.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp
 	@$(compiler) -c $< $(compilation_flags) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
+obj/client.o: Polyweb/client.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
+	@mkdir -p obj
+	@$(compiler) -c $< $(compilation_flags) -o $@
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
+
 obj/string.o: Polyweb/string.cpp Polyweb/string.hpp
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
+	@mkdir -p obj
+	@$(compiler) -c $< $(compilation_flags) -o $@
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
+
+obj/polyweb.o: Polyweb/polyweb.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/smart_sockets.hpp Polyweb/string.hpp Polyweb/threadpool.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
@@ -61,19 +61,19 @@ obj/websocket.o: Polyweb/websocket.cpp Polyweb/polyweb.hpp Polyweb/Polynet/polyn
 	@$(compiler) -c $< $(compilation_flags) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
-obj/polynet.o: Polyweb/Polynet/polynet.cpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp
-	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
-	@mkdir -p obj
-	@$(compiler) -c $< $(compilation_flags) -o $@
-	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
-
 obj/secure_sockets.o: Polyweb/Polynet/secure_sockets.cpp Polyweb/Polynet/secure_sockets.hpp Polyweb/Polynet/polynet.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
 
-freedom: obj/adblock.o obj/main.o obj/pages.o obj/bans.o obj/client.o obj/polyweb.o obj/server.o obj/string.o obj/websocket.o obj/polynet.o obj/secure_sockets.o
+obj/polynet.o: Polyweb/Polynet/polynet.cpp Polyweb/Polynet/polynet.hpp Polyweb/Polynet/secure_sockets.hpp
+	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
+	@mkdir -p obj
+	@$(compiler) -c $< $(compilation_flags) -o $@
+	@printf '\033[1m[POLYBUILD]\033[0m Finished compiling $@ from $<!\n'
+
+freedom: obj/bans.o obj/adblock.o obj/pages.o obj/main.o obj/server.o obj/client.o obj/string.o obj/polyweb.o obj/websocket.o obj/secure_sockets.o obj/polynet.o
 	@printf '\033[1m[POLYBUILD]\033[0m Building $@...\n'
 	@$(compiler) $^ $(compilation_flags) $(libraries) -o $@
 	@printf '\033[1m[POLYBUILD]\033[0m Finished building $@!\n'
