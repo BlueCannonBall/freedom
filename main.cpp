@@ -138,22 +138,25 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
                 if (split_decoded_auth[1] == admin_password) {
                     admin = true;
-                } else {
-                    if (is_banned(split_decoded_auth[0])) {
-                        ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
-                        if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
-                            ERR_WEB;
-                        }
-                    } else if (split_decoded_auth[1] != password) {
-                        ERR("Authorization failed: Incorrect password");
-                        if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
-                            ERR_WEB;
-                        }
+                } else if (is_banned(split_decoded_auth[0])) {
+                    ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
+                    if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
+                    }
+                    return;
+                } else if (split_decoded_auth[1] != password) {
+                    ERR("Authorization failed: Incorrect password");
+                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
+                        ERR_WEB;
                     }
                     return;
                 }
 
-                INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
+                if (admin) {
+                    INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized as admin");
+                } else {
+                    INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
+                }
             }
         }
     }
