@@ -141,7 +141,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
 
         function ban(username) {
-            if (username) {
+            if (username !== null) {
                 fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
                     method: "PUT",
                 }).then(resp => window.location.reload());
@@ -149,9 +149,11 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
 
         function unban(username) {
-            fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
-                method: "DELETE",
-            }).then(resp => window.location.reload());
+            if (username !== null) {
+                fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
+                    method: "DELETE",
+                }).then(resp => window.location.reload());
+            }
         }
     )delimiter";
     html << "</script>";

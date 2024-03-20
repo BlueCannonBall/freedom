@@ -15,6 +15,32 @@
 #define PROXY_AUTHENTICATE_BASIC \
     { "Proxy-Authenticate", "basic" }
 
+#define INFO(message)                                           \
+    {                                                           \
+        std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " \
+                  << "Info: " << message << std::endl;          \
+    }
+#define ERR(message)                                            \
+    {                                                           \
+        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
+                  << "Error: " << message << std::endl;         \
+    }
+#define ERR_NET                                                                  \
+    {                                                                            \
+        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "                  \
+                  << "Network error: " << pn::universal_strerror() << std::endl; \
+    }
+#define ERR_WEB                                                 \
+    {                                                           \
+        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
+                  << pw::universal_strerror() << std::endl;     \
+    }
+#define ERR_CLI(message)                                        \
+    {                                                           \
+        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
+                  << "CLI error: " << message << std::endl;     \
+    }
+
 inline int configure_socket(pn::Socket& socket) {
     static constexpr int value = 1;
     if (socket.setsockopt(IPPROTO_TCP, TCP_NODELAY, &value, sizeof(int)) == PN_ERROR) {

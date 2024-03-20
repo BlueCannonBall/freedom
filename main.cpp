@@ -10,32 +10,6 @@
 #include <utility>
 #include <vector>
 
-#define INFO(message)                                           \
-    {                                                           \
-        std::cout << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << "Info: " << message << std::endl;          \
-    }
-#define ERR(message)                                            \
-    {                                                           \
-        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << "Error: " << message << std::endl;         \
-    }
-#define ERR_NET                                                                  \
-    {                                                                            \
-        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "                  \
-                  << "Network error: " << pn::universal_strerror() << std::endl; \
-    }
-#define ERR_WEB                                                 \
-    {                                                           \
-        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << pw::universal_strerror() << std::endl;     \
-    }
-#define ERR_CLI(message)                                        \
-    {                                                           \
-        std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] " \
-                  << "CLI error: " << message << std::endl;     \
-    }
-
 std::string password;
 std::string admin_password;
 
@@ -142,7 +116,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 std::string decoded_auth_string(decoded_auth.begin(), decoded_auth.end());
 
                 std::vector<std::string> split_decoded_auth = pw::string::split(decoded_auth_string, ':');
-                if (split_decoded_auth.size() != 2) {
+                if (split_decoded_auth.size() != 2 || split_decoded_auth[0].empty()) {
                     ERR("Authorization failed: Bad username:password combination");
                     if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
@@ -150,22 +124,19 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                     return;
                 }
 
-                // Check if this user is banned
-                if (is_banned(split_decoded_auth[0])) {
-                    ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
-                    if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
-                        ERR_WEB;
-                    }
-                    return;
-                }
-
-                // Check if password is correct
                 if (split_decoded_auth[1] == admin_password) {
                     admin = true;
-                } else if (split_decoded_auth[1] != password) {
-                    ERR("Authorization failed: Incorrect password");
-                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
-                        ERR_WEB;
+                } else {
+                    if (is_banned(split_decoded_auth[0])) {
+                        ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
+                        if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                            ERR_WEB;
+                        }
+                    } else if (split_decoded_auth[1] != password) {
+                        ERR("Authorization failed: Incorrect password");
+                        if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
+                            ERR_WEB;
+                        }
                     }
                     return;
                 }
@@ -320,8 +291,6 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
                     ban(username_it->second);
-                    INFO("User " << std::quoted(username_it->second) << " has been BANNED");
-
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
                     }
@@ -335,8 +304,6 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
                     unban(username_it->second);
-                    INFO("User " << std::quoted(username_it->second) << " has been unbanned");
-
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
                     }

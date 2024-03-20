@@ -1,4 +1,5 @@
 #include "bans.hpp"
+#include "util.hpp"
 #include <algorithm>
 #include <iterator>
 
@@ -9,7 +10,7 @@ void init_ban_table() {
 }
 
 std::vector<std::string> get_bans() {
-    static sqlite::Statement stmt(db, "SELECT username FROM bans");
+    thread_local sqlite::Statement stmt(db, "SELECT username FROM bans");
     auto table = stmt.exec<sqlite::Text>();
     stmt.reset();
 
@@ -22,21 +23,23 @@ std::vector<std::string> get_bans() {
 }
 
 void ban(const std::string& username) {
-    static sqlite::Statement stmt(db, "INSERT OR IGNORE INTO bans (username) VALUES (?)");
+    thread_local sqlite::Statement stmt(db, "INSERT OR IGNORE INTO bans (username) VALUES (?)");
     stmt.bind(username, 1);
     stmt.exec_void();
+    INFO("User " << std::quoted(username) << " has been BANNED");
     stmt.reset();
 }
 
 void unban(const std::string& username) {
-    static sqlite::Statement stmt(db, "DELETE FROM bans WHERE username = ?");
+    thread_local sqlite::Statement stmt(db, "DELETE FROM bans WHERE username = ?");
     stmt.bind(username, 1);
     stmt.exec_void();
+    INFO("User " << std::quoted(username) << " has been unbanned");
     stmt.reset();
 }
 
 bool is_banned(const std::string& username) {
-    static sqlite::Statement stmt(db, "SELECT username FROM bans WHERE username = ?");
+    thread_local sqlite::Statement stmt(db, "SELECT username FROM bans WHERE username = ?");
     stmt.bind(username, 1);
     auto table = stmt.exec<sqlite::Text>();
     stmt.reset();
