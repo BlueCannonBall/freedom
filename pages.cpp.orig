@@ -49,7 +49,15 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
     html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_handled << "ms</p>";
 
     if (!users.empty()) {
+<<<<<<< HEAD
+        html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
+=======
+        ban_mutex.lock();
+        auto bans = get_bans();
+        ban_mutex.unlock();
+
         html << "<p><strong># of users:</strong> " << users.size() << "</p>";
+>>>>>>> 65843a24573090a06a02476ebac4dd33cbee8323
         html << "<p><strong>Most active users:</strong></p>";
         html << "<ol>";
         std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
@@ -67,8 +75,11 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
         html << "</ol>";
 
+<<<<<<< HEAD
         auto bans = get_bans();
+=======
         html << "<p><strong># of banned users:</strong> " << bans.size() << "</p>";
+>>>>>>> 65843a24573090a06a02476ebac4dd33cbee8323
         if (!bans.empty()) {
             html << "<p><strong>Banned users:</strong></p>";
             html << "<ul>";
