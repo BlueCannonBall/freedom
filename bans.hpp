@@ -7,7 +7,7 @@
 extern sqlite::Connection ban_db;
 
 void init_ban_table();
-std::vector<std::string> get_bans();
+std::vector<std::string> get_all_bans();
 
 void ban(const std::string& username);
 void unban(const std::string& username);

@@ -67,7 +67,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
         html << "</ol>";
 
-        auto bans = get_bans();
+        auto bans = get_all_bans();
         html << "<p><strong># of banned users:</strong> " << bans.size() << "</p>";
         if (!bans.empty()) {
             html << "<p><strong>Banned users:</strong></p>";

@@ -9,7 +9,7 @@ void init_ban_table() {
     db.exec("CREATE TABLE IF NOT EXISTS bans (username TEXT UNIQUE)");
 }
 
-std::vector<std::string> get_bans() {
+std::vector<std::string> get_all_bans() {
     thread_local sqlite::Statement stmt(db, "SELECT username FROM bans ORDER BY username");
     auto table = stmt.exec<sqlite::Text>();
     stmt.reset();
