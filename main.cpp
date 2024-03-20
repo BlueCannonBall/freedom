@@ -151,8 +151,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 }
 
                 // Check if this user is banned
-                auto bans = get_bans();
-                if (bans.count(split_decoded_auth[0])) {
+                if (is_banned(split_decoded_auth[0])) {
                     ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
                     if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
@@ -320,9 +319,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             } else if (url_info.path == "/ban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
-                    auto bans = get_bans();
-                    bans.insert(username_it->second);
-                    set_bans(bans);
+                    ban(username_it->second);
                     INFO("User " << std::quoted(username_it->second) << " has been BANNED");
 
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
@@ -337,9 +334,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             } else if (url_info.path == "/unban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
-                    auto bans = get_bans();
-                    bans.erase(username_it->second);
-                    set_bans(bans);
+                    unban(username_it->second);
                     INFO("User " << std::quoted(username_it->second) << " has been unbanned");
 
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
@@ -408,6 +403,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
+    init_ban_table();
     adblock::init();
 
     pn::UniqueSocket<pn::tcp::Server> server;

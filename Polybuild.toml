@@ -5,5 +5,5 @@ artifact = "obj"
 install = "/usr/local/bin"
 
 [options]
-compilation-flags = "-Wall -std=c++14 -O3 -pthread"
-libraries = ["ssl", "crypto"]
+compilation-flags = "-Wall -std=c++17 -O3 -pthread"
+libraries = ["ssl", "crypto", "sqlite3"]

@@ -49,8 +49,6 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
     html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_handled << "ms</p>";
 
     if (!users.empty()) {
-        auto bans = get_bans();
-
         html << "<p><strong>Unique users:</strong> " << users.size() << "</p>";
         html << "<p><strong>Most active users:</strong></p>";
         html << "<ol>";
@@ -60,7 +58,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         });
         for (const auto& user : user_pairs) {
             html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s) ";
-            if (bans.count(user.first)) {
+            if (is_banned(user.first)) {
                 html << "(<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(user.first) << "'); return false;\">Unban</a>)";
             } else {
                 html << "(<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::escape_xml(user.first) << "'); return false;\">Ban</a>)";
@@ -69,6 +67,7 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
         html << "</ol>";
 
+        auto bans = get_bans();
         if (!bans.empty()) {
             html << "<p><strong>Banned users:</strong></p>";
             html << "<ol>";

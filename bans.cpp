@@ -1,23 +1,44 @@
 #include "bans.hpp"
-#include <fstream>
-#include <mutex>
+#include <algorithm>
+#include <iterator>
 
-std::mutex mutex;
+sqlite::Connection db("bans.db");
 
-std::set<std::string> get_bans() {
-    std::lock_guard<std::mutex> lock(mutex);
-    std::set<std::string> ret;
-    std::ifstream file("bans.txt");
-    if (file.is_open()) {
-        for (std::string username; std::getline(file, username); ret.insert(std::move(username))) {}
-    }
+void init_ban_table() {
+    db.exec("CREATE TABLE IF NOT EXISTS bans (username TEXT UNIQUE)");
+}
+
+std::vector<std::string> get_bans() {
+    static sqlite::Statement stmt(db, "SELECT username FROM bans");
+    auto table = stmt.exec<sqlite::Text>();
+    stmt.reset();
+
+    std::vector<std::string> ret;
+    ret.reserve(table.size());
+    std::transform(table.begin(), table.end(), std::back_inserter(ret), [](const auto& row) {
+        return std::get<0>(row);
+    });
     return ret;
 }
 
-void set_bans(const std::set<std::string>& bans) {
-    std::lock_guard<std::mutex> lock(mutex);
-    std::ofstream file("bans.txt");
-    for (const auto& username : bans) {
-        file << username << '\n';
-    }
+void ban(const std::string& username) {
+    static sqlite::Statement stmt(db, "INSERT OR IGNORE INTO bans (username) VALUES (?)");
+    stmt.bind(username, 1);
+    stmt.exec_void();
+    stmt.reset();
+}
+
+void unban(const std::string& username) {
+    static sqlite::Statement stmt(db, "DELETE FROM bans WHERE username = ?");
+    stmt.bind(username, 1);
+    stmt.exec_void();
+    stmt.reset();
+}
+
+bool is_banned(const std::string& username) {
+    static sqlite::Statement stmt(db, "SELECT username FROM bans WHERE username = ?");
+    stmt.bind(username, 1);
+    auto table = stmt.exec<sqlite::Text>();
+    stmt.reset();
+    return !table.empty();
 }

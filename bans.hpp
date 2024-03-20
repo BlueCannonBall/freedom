@@ -1,7 +1,14 @@
 #pragma once
 
-#include <set>
+#include "sqlite.hpp"
 #include <string>
+#include <vector>
 
-std::set<std::string> get_bans();
-void set_bans(const std::set<std::string>& bans);
+extern sqlite::Connection ban_db;
+
+void init_ban_table();
+std::vector<std::string> get_bans();
+
+void ban(const std::string& username);
+void unban(const std::string& username);
+bool is_banned(const std::string& username);
