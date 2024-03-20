@@ -7,7 +7,7 @@ libraries := -lssl -lcrypto -lsqlite3
 default: freedom
 .PHONY: default
 
-obj/bans.o: ./bans.cpp ./bans.hpp ./sqlite.hpp
+obj/bans.o: ./bans.cpp ./bans.hpp ./sqlite.hpp ./util.hpp ./Polyweb/Polynet/polynet.hpp
 	@printf '\033[1m[POLYBUILD]\033[0m Compiling $@ from $<...\n'
 	@mkdir -p obj
 	@$(compiler) -c $< $(compilation_flags) -o $@
