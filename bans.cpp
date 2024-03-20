@@ -10,7 +10,7 @@ void init_ban_table() {
 }
 
 std::vector<std::string> get_bans() {
-    thread_local sqlite::Statement stmt(db, "SELECT username FROM bans");
+    thread_local sqlite::Statement stmt(db, "SELECT username FROM bans ORDER BY username");
     auto table = stmt.exec<sqlite::Text>();
     stmt.reset();
 
