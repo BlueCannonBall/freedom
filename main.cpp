@@ -124,6 +124,18 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                     return;
                 }
 
+                stats_mutex.lock();
+                decltype(users)::iterator user_it;
+                if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
+                    ++user_it->second;
+                } else {
+                    if (users.size() >= 1024) {
+                        users.clear();
+                    }
+                    users[split_decoded_auth[0]] = 1;
+                }
+                stats_mutex.unlock();
+
                 if (split_decoded_auth[1] == admin_password) {
                     admin = true;
                 } else {
@@ -140,18 +152,6 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                     }
                     return;
                 }
-
-                stats_mutex.lock();
-                decltype(users)::iterator user_it;
-                if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
-                    ++user_it->second;
-                } else {
-                    if (users.size() >= 1024) {
-                        users.clear();
-                    }
-                    users[split_decoded_auth[0]] = 1;
-                }
-                stats_mutex.unlock();
 
                 INFO("User " << std::quoted(split_decoded_auth[0]) << " successfully authorized");
             }
