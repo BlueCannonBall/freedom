@@ -2,7 +2,12 @@
 
 compiler := $(CXX)
 compilation_flags := -Wall -std=c++17 -O3 -pthread
-libraries := -lssl -lcrypto -lsqlite3
+libraries := -lsqlite3 -lssl -lcrypto
+
+ifeq ($(OS),Windows_NT)
+	compilation_flags := -Wall -std=c++17 -O3 -pthread -static-libgcc -static-libstdc++
+	libraries := -lsqlite3 -lssl -lcrypto -lz -lws2_32 -lcrypt32
+endif
 
 default: freedom
 .PHONY: default
