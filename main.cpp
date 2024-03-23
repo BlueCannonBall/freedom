@@ -196,7 +196,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         std::string reason;
         if (adblock::is_blacklisted(split_host[0], reason)) {
-            INFO("Got connection to blacklisted domain: " << split_host[0]);
+            INFO("Got connection to blacklisted domain " << split_host[0]);
             stats_mutex.lock();
             ++ads_blocked;
             stats_mutex.unlock();
@@ -250,7 +250,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         pw::URLInfo url_info;
         if (url_info.parse(req.target) == PN_ERROR) {
             ERR_WEB;
-            ERR("Failed to parse URL: " << req.target);
+            ERR("Failed to parse URL " << req.target);
             if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                 ERR_WEB;
             }
@@ -271,7 +271,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         std::string reason;
         if (adblock::is_blacklisted(url_info.hostname(), reason)) {
-            INFO("Got connection to blacklisted domain: " << url_info.hostname());
+            INFO("Got connection to blacklisted domain " << url_info.hostname());
             stats_mutex.lock();
             ++ads_blocked;
             stats_mutex.unlock();
