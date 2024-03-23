@@ -157,8 +157,8 @@ pw::HTTPResponse stats_page(const std::string& http_version) {
         }
     )delimiter";
     html << "</script>";
-
     html << "</body>";
+
     html << "</html>";
     return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
 }
@@ -172,13 +172,12 @@ pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const
     html << "</head>";
 
     html << "<body>";
-
     html << "<div style=\"margin: 0; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);\">";
     html << "<h1 style=\"text-align: center;\">\"" << host << "\" could not be loaded</h1>";
     html << "<p style=\"text-align: center;\"><strong>Error:</strong> " << error_message << "</p>";
     html << "</div>";
-
     html << "</body>";
+
     html << "</html>";
     return pw::HTTPResponse(status_code, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
 }

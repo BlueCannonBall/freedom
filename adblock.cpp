@@ -1,6 +1,6 @@
 #include "adblock.hpp"
 #include "Polyweb/polyweb.hpp"
-#include <ctime>
+#include <chrono>
 #include <mutex>
 #include <sstream>
 #include <unordered_set>
@@ -8,10 +8,10 @@
 namespace adblock {
     std::mutex mutex;
     std::unordered_set<std::string> blocked_hostnames;
-    time_t last_updated = 0;
+    std::chrono::steady_clock::time_point last_updated = std::chrono::steady_clock::time_point::min();
 
     void init() {
-        if (time(nullptr) - last_updated > 86400) {
+        if (std::chrono::steady_clock::now() - last_updated > std::chrono::hours(24)) {
             pw::HTTPResponse resp;
             if (pw::fetch("https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/pro.txt", resp, {}, {.body_rlimit = 100'000'000}) == PN_OK &&
                 resp.status_code_category() == 200) {
@@ -24,7 +24,7 @@ namespace adblock {
                     }
                 }
             }
-            last_updated = time(nullptr);
+            last_updated = std::chrono::steady_clock::now();
         }
     }
 
