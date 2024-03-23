@@ -20,7 +20,7 @@ namespace adblock {
             reason(reason) {}
 
         void update(const std::string& url) {
-            if (std::chrono::steady_clock::now() - last_updated > std::chrono::hours(24)) {
+            if (hostnames.empty() || std::chrono::steady_clock::now() - last_updated > std::chrono::hours(24)) {
                 pw::HTTPResponse resp;
                 if (pw::fetch(url, resp, {}, {.body_rlimit = 100'000'000}) == PN_OK &&
                     resp.status_code_category() == 200) {
@@ -40,7 +40,7 @@ namespace adblock {
             }
         }
 
-        bool is_blacklisted(const std::string& hostname) {
+        bool is_blacklisted(const std::string& hostname) const {
             return hostnames.count(hostname);
         }
     };
@@ -65,9 +65,10 @@ namespace adblock {
         }
     }
 
-    bool is_blacklisted(const std::string& hostname, std::string& reason) {
+    bool is_blacklisted(const std::string& hostname, std::string& reason, bool update_lists) {
         std::lock_guard<std::mutex> lock(mutex);
         for (auto& blacklist : blacklists) {
+            if (update_lists) blacklist.second.update(blacklist.first);
             if (blacklist.second.is_blacklisted(hostname)) {
                 reason = blacklist.second.reason;
                 return true;
