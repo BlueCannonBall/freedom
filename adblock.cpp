@@ -8,7 +8,7 @@
 namespace adblock {
     std::mutex mutex;
     std::unordered_set<std::string> blocked_hostnames;
-    std::chrono::steady_clock::time_point last_updated = std::chrono::steady_clock::time_point::min();
+    std::chrono::steady_clock::time_point last_updated;
 
     void init() {
         if (std::chrono::steady_clock::now() - last_updated > std::chrono::hours(24)) {
