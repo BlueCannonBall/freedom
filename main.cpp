@@ -194,12 +194,13 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             split_host.push_back("80");
         }
 
-        if (adblock::check_hostname(split_host[0])) {
+        std::string reason;
+        if (adblock::is_blacklisted(split_host[0], reason)) {
             INFO("Got ad connection");
             stats_mutex.lock();
             ++ads_blocked;
             stats_mutex.unlock();
-            if (conn->send(error_page(403, req.target, "Ad detected", req.http_version)) == PN_ERROR) {
+            if (conn->send(error_page(403, req.target, reason, req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -268,12 +269,13 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             return;
         }
 
-        if (adblock::check_hostname(url_info.hostname())) {
+        std::string reason;
+        if (adblock::is_blacklisted(url_info.hostname(), reason)) {
             INFO("Got ad connection");
             stats_mutex.lock();
             ++ads_blocked;
             stats_mutex.unlock();
-            if (conn->send(error_page(403, url_info.host, "Ad detected", req.http_version)) == PN_ERROR) {
+            if (conn->send(error_page(403, url_info.host, reason, req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -374,7 +376,13 @@ int main(int argc, char* argv[]) {
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
     init_ban_table();
-    adblock::init();
+    adblock::register_blacklist(
+        "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/pro.txt",
+        "This content is advertising.");
+    adblock::register_blacklist(
+        "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/gambling-porn-only/hosts",
+        "In the Name of Allah, the Most Compassionate, the Most Merciful. This content is haram.");
+    adblock::update_all_blacklists();
 
     pn::UniqueSocket<pn::tcp::Server> server;
     if (server->bind("0.0.0.0", argv[1]) == PN_ERROR) {
