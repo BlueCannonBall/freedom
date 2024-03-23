@@ -196,7 +196,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         std::string reason;
         if (adblock::is_blacklisted(split_host[0], reason)) {
-            INFO("Got ad connection");
+            INFO("Got connection to blacklisted domain: " << split_host[0]);
             stats_mutex.lock();
             ++ads_blocked;
             stats_mutex.unlock();
@@ -271,7 +271,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         std::string reason;
         if (adblock::is_blacklisted(url_info.hostname(), reason)) {
-            INFO("Got ad connection");
+            INFO("Got connection to blacklisted domain: " << url_info.hostname());
             stats_mutex.lock();
             ++ads_blocked;
             stats_mutex.unlock();
@@ -377,10 +377,10 @@ int main(int argc, char* argv[]) {
     pn::init(true);
     init_ban_table();
     adblock::register_blacklist(
-        "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/pro.txt",
+        "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/pro.txt",
         "This content is advertising.");
     adblock::register_blacklist(
-        "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/gambling-porn-only/hosts",
+        "http://sbc.io/hosts/alternates/gambling-porn-only/hosts",
         "In the Name of Allah, the Most Compassionate, the Most Merciful. This content is haram.");
     adblock::update_all_blacklists();
 

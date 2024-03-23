@@ -5,7 +5,7 @@ compilation_flags := -Wall -std=c++17 -O3 -pthread
 libraries := -lsqlite3 -lssl -lcrypto
 
 ifeq ($(OS),Windows_NT)
-	compilation_flags := -Wall -std=c++17 -O3 -pthread -static-libgcc -static-libstdc++
+	compilation_flags := -Wall -std=c++17 -O3 -pthread -static-libgcc -static-libstdc++ -static
 	libraries := -lsqlite3 -lssl -lcrypto -lz -lws2_32 -lcrypt32
 endif
 
