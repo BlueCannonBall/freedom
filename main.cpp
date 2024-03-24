@@ -41,9 +41,9 @@ void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_re
 
 void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn_buf_receiver) {
     Timer<> timer([](auto duration) {
-        std::lock_guard<std::mutex> lock(stats_mutex);
-        response_time += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
-        ++requests_handled;
+        std::lock_guard<std::mutex> lock(pages::stats_mutex);
+        pages::response_time += std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+        ++pages::requests_handled;
     });
 
     if (set_socket_timeout(*conn, std::chrono::seconds(30)) == PN_ERROR) {
@@ -76,18 +76,18 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         return;
     }
 
-    stats_mutex.lock();
-    decltype(activity)::iterator date_it;
+    pages::stats_mutex.lock();
+    decltype(pages::activity)::iterator date_it;
     std::string date = get_date();
-    if ((date_it = activity.find(date)) != activity.end()) {
+    if ((date_it = pages::activity.find(date)) != pages::activity.end()) {
         ++date_it->second;
     } else {
-        if (activity.size() >= 180) {
-            activity.clear();
+        if (pages::activity.size() >= 180) {
+            pages::activity.clear();
         }
-        activity[date] = 1;
+        pages::activity[date] = 1;
     }
-    stats_mutex.unlock();
+    pages::stats_mutex.unlock();
 
     bool admin = false;
     if (!password.empty()) {
@@ -124,21 +124,21 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                     return;
                 }
 
-                stats_mutex.lock();
-                decltype(users)::iterator user_it;
-                if ((user_it = users.find(split_decoded_auth[0])) != users.end()) {
+                pages::stats_mutex.lock();
+                decltype(pages::users)::iterator user_it;
+                if ((user_it = pages::users.find(split_decoded_auth[0])) != pages::users.end()) {
                     ++user_it->second;
                 } else {
-                    if (users.size() >= 1024) {
-                        users.clear();
+                    if (pages::users.size() >= 1024) {
+                        pages::users.clear();
                     }
-                    users[split_decoded_auth[0]] = 1;
+                    pages::users[split_decoded_auth[0]] = 1;
                 }
-                stats_mutex.unlock();
+                pages::stats_mutex.unlock();
 
                 if (split_decoded_auth[1] == admin_password) {
                     admin = true;
-                } else if (is_banned(split_decoded_auth[0])) {
+                } else if (bans::is_banned(split_decoded_auth[0])) {
                     ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
                     if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
@@ -197,10 +197,10 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         std::string reason;
         if (adblock::is_blacklisted(split_host[0], reason)) {
             INFO("Got connection to blacklisted domain " << split_host[0]);
-            stats_mutex.lock();
-            ++ads_blocked;
-            stats_mutex.unlock();
-            if (conn->send(error_page(403, req.target, reason, req.http_version)) == PN_ERROR) {
+            pages::stats_mutex.lock();
+            ++pages::ads_blocked;
+            pages::stats_mutex.unlock();
+            if (conn->send(pages::error_page(403, req.target, reason, req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -211,7 +211,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         if (proxy->connect(split_host[0], split_host[1]) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to create proxy connection");
-            if (conn->send(error_page(404, req.target, pn::universal_strerror(), req.http_version)) == PN_ERROR) {
+            if (conn->send(pages::error_page(404, req.target, pn::universal_strerror(), req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -220,7 +220,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         if (configure_socket(*proxy) == PN_ERROR || set_socket_timeout(*proxy, std::chrono::hours(2)) == PN_ERROR) {
             ERR_NET;
             ERR("Failed to configure socket");
-            if (conn->send(error_page(500, req.target, pn::universal_strerror(), req.http_version)) == PN_ERROR) {
+            if (conn->send(pages::error_page(500, req.target, pn::universal_strerror(), req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -241,7 +241,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         route(std::move(proxy), proxy_buf_receiver, std::move(conn));
     } else {
         if (password.empty() && req.target == "/stats") {
-            if (conn->send(stats_page(req.http_version)) == PN_ERROR) {
+            if (conn->send(pages::stats_page(req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -272,10 +272,10 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         std::string reason;
         if (adblock::is_blacklisted(url_info.hostname(), reason)) {
             INFO("Got connection to blacklisted domain " << url_info.hostname());
-            stats_mutex.lock();
-            ++ads_blocked;
-            stats_mutex.unlock();
-            if (conn->send(error_page(403, url_info.host, reason, req.http_version)) == PN_ERROR) {
+            pages::stats_mutex.lock();
+            ++pages::ads_blocked;
+            pages::stats_mutex.unlock();
+            if (conn->send(pages::error_page(403, url_info.host, reason, req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -286,7 +286,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 url_info.hostname() == "stats.gov")) {
             pw::HTTPResponse resp;
             if (url_info.path == "/") {
-                resp = stats_page(req.http_version);
+                resp = pages::stats_page(req.http_version);
             } else if (url_info.path == "/change_username") {
                 if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
                     ERR_WEB;
@@ -295,7 +295,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             } else if (url_info.path == "/ban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
-                    ban(username_it->second);
+                    bans::ban(username_it->second);
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
                     }
@@ -308,7 +308,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             } else if (url_info.path == "/unban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
-                    unban(username_it->second);
+                    bans::unban(username_it->second);
                     if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                         ERR_WEB;
                     }
@@ -319,7 +319,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 }
                 return;
             } else {
-                resp = error_page(404, url_info.host, req.target + " could not be found", req.http_version);
+                resp = pages::error_page(404, url_info.host, req.target + " could not be found", req.http_version);
             }
 
             if (conn->send(resp, req.method == "HEAD") == PN_ERROR) {
@@ -340,7 +340,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         if (pw::fetch(url_info.hostname(), url_info.port(), url_info.scheme == "https", req, resp, {}, 0) == PN_ERROR) {
             ERR_WEB;
             ERR("Failed to perform HTTP request to " << url_info.host);
-            if (conn->send(error_page(500, url_info.host, pw::universal_strerror(), req.http_version)) == PN_ERROR) {
+            if (conn->send(pages::error_page(500, url_info.host, pw::universal_strerror(), req.http_version)) == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
-    init_ban_table();
+    bans::init_ban_table();
     adblock::register_blacklist(
         "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/pro.txt",
         "This content is advertising.");
