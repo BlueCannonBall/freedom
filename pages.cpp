@@ -105,58 +105,58 @@ namespace pages {
         }
         html << "];";
         html << R"delimiter(
-        const ctx = document.getElementById("chart");
+            const ctx = document.getElementById("chart");
 
-        Chart.defaults.color = "rgb(204, 204, 204)";
-        new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels,
-                datasets: [{
-                    label: "# of Requests",
-                    backgroundColor: "#FF4545",
-                    data,
-                    borderWidth: 1,
-                }],
-            },
-            options: {
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: "rgb(85, 85, 85)",
+            Chart.defaults.color = "rgb(204, 204, 204)";
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [{
+                        label: "# of Requests",
+                        backgroundColor: "#FF4545",
+                        data,
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                color: "rgb(85, 85, 85)",
+                            },
                         },
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: "rgb(85, 85, 85)",
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: "rgb(85, 85, 85)",
+                            },
                         },
                     },
                 },
-            },
-        });
+            });
 
-        function changeUsername() {
-            fetch("http://stats.gov/change_username");
-        }
-
-        function ban(username) {
-            if (username !== null) {
-                fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
-                    method: "PUT",
-                }).then(resp => window.location.reload());
+            function changeUsername() {
+                fetch("http://stats.gov/change_username");
             }
-        }
 
-        function unban(username) {
-            if (username !== null) {
-                fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
-                    method: "DELETE",
-                }).then(resp => window.location.reload());
+            function ban(username) {
+                if (username !== null) {
+                    fetch("http://stats.gov/ban?" +  new URLSearchParams({username}), {
+                        method: "PUT",
+                    }).then(resp => window.location.reload());
+                }
             }
-        }
-    )delimiter";
+
+            function unban(username) {
+                if (username !== null) {
+                    fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
+                        method: "DELETE",
+                    }).then(resp => window.location.reload());
+                }
+            }
+        )delimiter";
         html << "</script>";
         html << "</body>";
 
