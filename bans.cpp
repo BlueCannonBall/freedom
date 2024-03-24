@@ -7,7 +7,7 @@
 namespace bans {
     sqlite::Connection db("bans.db");
 
-    void init_ban_table() {
+    void init_table() {
         db.exec("CREATE TABLE IF NOT EXISTS bans (username TEXT UNIQUE)");
     }
 
