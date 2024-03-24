@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace bans {
-    void init_table();
+    void init();
     std::vector<std::string> get_all_bans();
 
     void ban(const std::string& username);

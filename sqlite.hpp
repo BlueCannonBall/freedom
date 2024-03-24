@@ -30,6 +30,7 @@ namespace sqlite {
         sqlite3* raw_conn = nullptr;
 
     public:
+        Connection() = default;
         Connection(const std::string& filename, int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX) {
             int result;
             if ((result = sqlite3_open_v2(filename.c_str(), &raw_conn, flags, nullptr)) != SQLITE_OK) {
@@ -50,6 +51,15 @@ namespace sqlite {
 
         ~Connection() {
             sqlite3_close(raw_conn);
+        }
+
+        void init(const std::string& filename, int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX) {
+            sqlite3_close(raw_conn);
+
+            int result;
+            if ((result = sqlite3_open_v2(filename.c_str(), &raw_conn, flags, nullptr)) != SQLITE_OK) {
+                throw Error(errstr(result));
+            }
         }
 
         int errcode() const {
@@ -130,6 +140,7 @@ namespace sqlite {
         sqlite3_stmt* raw_stmt = nullptr;
 
     public:
+        Statement() = default;
         Statement(const Connection& conn, const std::string& sql) {
             int result;
             if ((result = sqlite3_prepare_v2(conn.raw_conn, sql.c_str(), -1, &raw_stmt, nullptr)) != SQLITE_OK) {
@@ -150,6 +161,15 @@ namespace sqlite {
 
         ~Statement() {
             sqlite3_finalize(raw_stmt);
+        }
+
+        void init(const Connection& conn, const std::string& sql) {
+            sqlite3_finalize(raw_stmt);
+
+            int result;
+            if ((result = sqlite3_prepare_v2(conn.raw_conn, sql.c_str(), -1, &raw_stmt, nullptr)) != SQLITE_OK) {
+                throw Error(errstr(result));
+            }
         }
 
         void bind(const Blob& value, size_t index) {

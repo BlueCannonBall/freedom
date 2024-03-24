@@ -375,7 +375,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
-    bans::init_table();
+    bans::init();
     adblock::register_blacklist(
         "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/pro.txt",
         "This content is advertising.");
