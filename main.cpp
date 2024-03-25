@@ -380,8 +380,17 @@ int main(int argc, char* argv[]) {
         "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/pro.txt",
         "This content is advertising.");
     adblock::register_blacklist(
+        "https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt",
+        "This content is advertising.");
+    adblock::register_blacklist(
+        "https://hosts.anudeep.me/mirror/adservers.txt",
+        "This content is advertising.");
+    adblock::register_blacklist(
         "http://sbc.io/hosts/alternates/gambling-porn-only/hosts",
-        "In the Name of Allah, the Most Compassionate, the Most Merciful. This content is haram.");
+        "In the Name of Allah, the Most Compassionate, the Most Merciful. Porn and gambling are haram.");
+    adblock::register_blacklist(
+        "https://www.github.developerdan.com/hosts/lists/dating-services-extended.txt",
+        "In the Name of Allah, the Most Compassionate, the Most Merciful. Dating is haram.");
     adblock::update_all_blacklists();
 
     pn::UniqueSocket<pn::tcp::Server> server;
