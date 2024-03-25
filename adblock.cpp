@@ -20,7 +20,8 @@ namespace adblock {
             reason(reason) {}
 
         void update(const std::string& url) {
-            if (hostnames.empty() || std::chrono::steady_clock::now() - last_updated > std::chrono::hours(24)) {
+            auto now = std::chrono::steady_clock::now();
+            if (hostnames.empty() || now - last_updated > std::chrono::hours(24)) {
                 pw::HTTPResponse resp;
                 if (pw::fetch(url, resp, {}, {.body_rlimit = 100'000'000}) == PN_OK &&
                     resp.status_code_category() == 200) {
@@ -36,7 +37,7 @@ namespace adblock {
                         }
                     }
                 }
-                last_updated = std::chrono::steady_clock::now();
+                last_updated = now;
             }
         }
 
