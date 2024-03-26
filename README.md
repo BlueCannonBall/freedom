@@ -9,5 +9,5 @@ $ sudo make install
 
 ## Usage
 ```sh
-$ freedom <PORT> [PASSWORD]
+$ freedom <PORT> [PASSWORD] [ADMIN_PASSWORD]
 ```
