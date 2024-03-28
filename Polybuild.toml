@@ -6,9 +6,9 @@ install = "/usr/local/bin"
 
 [options]
 compilation-flags = "-Wall -std=c++17 -O3 -pthread"
-libraries = ["sqlite3", "ssl", "crypto"]
+libraries = ["fltk", "sqlite3", "ssl", "crypto"]
 
 [env.OS.Windows_NT.options]
 compilation-flags = "-Wall -std=c++17 -O3 -pthread -static-libgcc -static-libstdc++"
-libraries = ["sqlite3", "ssl", "crypto", "z", "ws2_32", "crypt32"]
+libraries = ["fltk", "sqlite3", "ssl", "crypto", "z", "gdi32", "ws2_32", "crypt32", "comctl32", "ole32", "uuid"]
 static = true

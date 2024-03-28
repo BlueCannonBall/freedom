@@ -3,6 +3,14 @@
 #include "bans.hpp"
 #include "pages.hpp"
 #include "util.hpp"
+#include <FL/Fl.H>
+#include <FL/Fl_Button.H>
+#include <FL/Fl_Check_Button.H>
+#include <FL/Fl_Secret_Input.H>
+#include <FL/Fl_Spinner.H>
+#include <FL/Fl_Window.H>
+#include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
@@ -10,8 +18,76 @@
 #include <utility>
 #include <vector>
 
+std::string port;
 std::string password;
 std::string admin_password;
+
+class SetupWindow : public Fl_Window {
+protected:
+    std::unique_ptr<Fl_Spinner> port_input;
+    std::unique_ptr<Fl_Check_Button> accounts_check_button;
+    std::unique_ptr<Fl_Secret_Input> password_input;
+    std::unique_ptr<Fl_Secret_Input> admin_password_input;
+    std::unique_ptr<Fl_Button> start_button;
+    std::unique_ptr<Fl_Button> cancel_button;
+
+public:
+    SetupWindow():
+        Fl_Window(355, 165, "Freedom Setup") {
+        begin();
+        port_input = std::make_unique<Fl_Spinner>(140, 10, 200, 25, "Port:");
+        accounts_check_button = std::make_unique<Fl_Check_Button>(140, 40, 200, 25, "User accounts");
+        password_input = std::make_unique<Fl_Secret_Input>(140, 70, 200, 25, "Password:");
+        admin_password_input = std::make_unique<Fl_Secret_Input>(140, 100, 200, 25, "Admin password:");
+        start_button = std::make_unique<Fl_Button>(215, 130, 60, 25, "Start");
+        cancel_button = std::make_unique<Fl_Button>(280, 130, 60, 25, "Cancel");
+        end();
+
+        port_input->type(FL_INT_INPUT);
+        port_input->minimum(0);
+        port_input->maximum(65535);
+        port_input->value(8000);
+
+        accounts_check_button->callback([](Fl_Widget* widget, void* data) {
+            auto setup_window = (SetupWindow*) data;
+            auto accounts_check_button = (Fl_Check_Button*) widget;
+            if (accounts_check_button->value()) {
+                setup_window->password_input->activate();
+                setup_window->admin_password_input->activate();
+            } else {
+                setup_window->password_input->deactivate();
+                setup_window->admin_password_input->deactivate();
+            }
+        },
+            this);
+
+        password_input->deactivate();
+        admin_password_input->deactivate();
+
+        start_button->callback([](Fl_Widget* widget, void* data) {
+            auto setup_window = (SetupWindow*) data;
+            port = std::to_string((int) setup_window->port_input->value());
+            if (setup_window->accounts_check_button->value()) {
+                password = setup_window->password_input->value();
+                admin_password = setup_window->admin_password_input->value();
+            }
+            setup_window->hide();
+        },
+            this);
+
+        cancel_button->callback([](Fl_Widget* widget, void* data) {
+            auto setup_window = (SetupWindow*) data;
+            setup_window->hide();
+            exit(0);
+        },
+            this);
+
+        callback([](Fl_Widget* widget) {
+            widget->hide();
+            exit(0);
+        });
+    }
+};
 
 void route(pn::SharedSocket<pn::tcp::Connection> a, pn::tcp::BufReceiver& buf_receiver, pn::WeakSocket<pn::tcp::Connection> b) {
     char buf[UINT16_MAX];
@@ -262,7 +338,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             req.http_version == "HTTP/1.1" &&
             (connection_it = req.headers.find("Connection")) != req.headers.end() &&
             pw::string::to_lower_copy(connection_it->second) == "upgrade") {
-            ERR("Client attempted to upgrade with an absolute-target request");
+            ERR("Client attempted to upgrade with an absolute-form target request");
             if (conn->send_basic(501, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
                 ERR_WEB;
             }
@@ -360,16 +436,26 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        ERR_CLI("Missing arguments");
-        std::cout << "Usage: " << argv[0] << " <PORT> [PASSWORD]\n";
-        return 1;
-    }
-
-    if (argc >= 3) {
-        password = argv[2];
-        if (argc >= 4) {
-            admin_password = argv[3];
+    if (argc <= 1) {
+        Fl::scheme("gradient");
+        SetupWindow setup_window;
+        setup_window.show();
+        if (int result = Fl::run()) {
+            return result;
+        }
+    } else {
+        if (argc < 2) {
+            ERR_CLI("Missing arguments");
+            std::cout << "Usage: " << argv[0] << " <PORT> [PASSWORD]\n";
+            return 1;
+        } else {
+            port = argv[1];
+            if (argc >= 3) {
+                password = argv[2];
+                if (argc >= 4) {
+                    admin_password = argv[3];
+                }
+            }
         }
     }
 
@@ -394,7 +480,7 @@ int main(int argc, char* argv[]) {
     adblock::update_all_blacklists();
 
     pn::UniqueSocket<pn::tcp::Server> server;
-    if (server->bind("0.0.0.0", argv[1]) == PN_ERROR) {
+    if (server->bind("0.0.0.0", port) == PN_ERROR) {
         ERR_NET;
         return 1;
     }
@@ -405,7 +491,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    INFO("Proxy server listening on port " << argv[1]);
+    INFO("Proxy server listening on port " << port);
     if (server->listen([](pn::tcp::Connection& conn, void*) -> bool {
             pw::threadpool.schedule([conn](void* data) {
                 pn::tcp::BufReceiver buf_receiver;
