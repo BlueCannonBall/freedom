@@ -436,25 +436,18 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 }
 
 int main(int argc, char* argv[]) {
-    if (argc <= 1) {
-        Fl::scheme("gradient");
+    if (argc < 2) {
         SetupWindow setup_window;
         setup_window.show();
         if (int result = Fl::run()) {
             return result;
         }
     } else {
-        if (argc < 2) {
-            ERR_CLI("Missing arguments");
-            std::cout << "Usage: " << argv[0] << " <PORT> [PASSWORD]\n";
-            return 1;
-        } else {
-            port = argv[1];
-            if (argc >= 3) {
-                password = argv[2];
-                if (argc >= 4) {
-                    admin_password = argv[3];
-                }
+        port = argv[1];
+        if (argc >= 3) {
+            password = argv[2];
+            if (argc >= 4) {
+                admin_password = argv[3];
             }
         }
     }
