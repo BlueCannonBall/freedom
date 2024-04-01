@@ -24,23 +24,23 @@ std::string admin_password;
 
 class SetupWindow : public Fl_Window {
 protected:
-    std::unique_ptr<Fl_Spinner> port_input;
-    std::unique_ptr<Fl_Check_Button> accounts_check_button;
-    std::unique_ptr<Fl_Secret_Input> password_input;
-    std::unique_ptr<Fl_Secret_Input> admin_password_input;
-    std::unique_ptr<Fl_Button> start_button;
-    std::unique_ptr<Fl_Button> cancel_button;
+    Fl_Spinner* port_input;
+    Fl_Check_Button* accounts_check_button;
+    Fl_Secret_Input* password_input;
+    Fl_Secret_Input* admin_password_input;
+    Fl_Button* start_button;
+    Fl_Button* cancel_button;
 
 public:
     SetupWindow():
-        Fl_Window(355, 165, "Freedom Setup") {
+        Fl_Window(350, 165, "Freedom Setup") {
         begin();
-        port_input = std::make_unique<Fl_Spinner>(140, 10, 200, 25, "Port:");
-        accounts_check_button = std::make_unique<Fl_Check_Button>(140, 40, 200, 25, "User accounts");
-        password_input = std::make_unique<Fl_Secret_Input>(140, 70, 200, 25, "Password:");
-        admin_password_input = std::make_unique<Fl_Secret_Input>(140, 100, 200, 25, "Admin password:");
-        start_button = std::make_unique<Fl_Button>(215, 130, 60, 25, "Start");
-        cancel_button = std::make_unique<Fl_Button>(280, 130, 60, 25, "Cancel");
+        port_input = new Fl_Spinner(140, 10, 80, 25, "Port:");
+        accounts_check_button = new Fl_Check_Button(140, 40, 200, 25, "User accounts");
+        password_input = new Fl_Secret_Input(140, 70, 200, 25, "Password:");
+        admin_password_input = new Fl_Secret_Input(140, 100, 200, 25, "Admin password:");
+        start_button = new Fl_Button(205, 130, 65, 25, "Start");
+        cancel_button = new Fl_Button(275, 130, 65, 25, "Cancel");
         end();
 
         port_input->type(FL_INT_INPUT);
