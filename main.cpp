@@ -31,8 +31,8 @@ class SetupWindow final : public Fl_Window {
     Fl_Button* cancel_button;
 
 public:
-    SetupWindow():
-        Fl_Window(350, 165, "Freedom Setup") {
+    SetupWindow(const char* title = "Freedom Setup"):
+        Fl_Window(350, 165, title) {
         begin();
         port_input = new Fl_Spinner(140, 10, 80, 25, "Port:");
         accounts_check_button = new Fl_Check_Button(140, 40, 200, 25, "User accounts");
