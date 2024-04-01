@@ -22,8 +22,7 @@ std::string port;
 std::string password;
 std::string admin_password;
 
-class SetupWindow : public Fl_Window {
-protected:
+class SetupWindow final : public Fl_Window {
     Fl_Spinner* port_input;
     Fl_Check_Button* accounts_check_button;
     Fl_Secret_Input* password_input;
