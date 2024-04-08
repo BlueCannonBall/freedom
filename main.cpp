@@ -453,6 +453,19 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Cross-platform networking brought to you by:\n";
     pn::init(true);
+
+    pn::UniqueSocket<pn::tcp::Server> server;
+    if (server->bind("0.0.0.0", port) == PN_ERROR) {
+        ERR_NET;
+        return 1;
+    }
+
+    if (configure_socket(*server) == PN_ERROR) {
+        ERR_NET;
+        ERR("Failed to configure server socket");
+        return 1;
+    }
+
     bans::init();
     adblock::register_blacklist(
         "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/pro.txt",
@@ -470,18 +483,6 @@ int main(int argc, char* argv[]) {
         "https://www.github.developerdan.com/hosts/lists/dating-services-extended.txt",
         "In the Name of Allah, the Most Compassionate, the Most Merciful. Dating is haram.");
     adblock::update_all_blacklists();
-
-    pn::UniqueSocket<pn::tcp::Server> server;
-    if (server->bind("0.0.0.0", port) == PN_ERROR) {
-        ERR_NET;
-        return 1;
-    }
-
-    if (configure_socket(*server) == PN_ERROR) {
-        ERR_NET;
-        ERR("Failed to configure server socket");
-        return 1;
-    }
 
     INFO("Proxy server listening on port " << port);
     if (server->listen([](pn::tcp::Connection& conn, void*) -> bool {
