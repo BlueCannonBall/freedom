@@ -58,11 +58,11 @@ namespace pages {
                 return a.second > b.second;
             });
             for (const auto& user : user_pairs) {
-                html << "<li>" << pw::escape_xml(user.first) << " - " << user.second << " request(s) ";
+                html << "<li>" << pw::xml_escape(user.first) << " - " << user.second << " request(s) ";
                 if (bans::is_banned(user.first)) {
-                    html << "(<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(user.first) << "'); return false;\">Unban</a>)";
+                    html << "(<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(user.first) << "'); return false;\">Unban</a>)";
                 } else {
-                    html << "(<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::escape_xml(user.first) << "'); return false;\">Ban</a>)";
+                    html << "(<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::xml_escape(user.first) << "'); return false;\">Ban</a>)";
                 }
                 html << "</li>";
             }
@@ -74,7 +74,7 @@ namespace pages {
                 html << "<p><strong>Banned users:</strong></p>";
                 html << "<ul>";
                 for (const auto& username : bans) {
-                    html << "<li>" << pw::escape_xml(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::escape_xml(username) << "'); return false;\">Unban</a>)</li>";
+                    html << "<li>" << pw::xml_escape(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(username) << "'); return false;\">Unban</a>)</li>";
                 }
                 html << "</ul>";
             }
