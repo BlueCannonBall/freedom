@@ -13,14 +13,19 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 std::string port;
 std::string password;
 std::string admin_password;
+
+std::mutex deauthenticated_users_mutex;
+std::unordered_set<std::string> deauthenticated_users;
 
 class SetupWindow final : public Fl_Window {
     Fl_Spinner* port_input;
@@ -151,24 +156,25 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         return;
     }
 
-    pages::stats_mutex.lock();
-    decltype(pages::activity)::iterator date_it;
-    std::string date = get_date();
-    if ((date_it = pages::activity.find(date)) != pages::activity.end()) {
-        ++date_it->second;
-    } else {
-        if (pages::activity.size() >= 180) {
-            pages::activity.clear();
+    {
+        std::lock_guard<std::mutex> lock(pages::stats_mutex);
+        decltype(pages::activity)::iterator date_it;
+        std::string date = get_date();
+        if ((date_it = pages::activity.find(date)) != pages::activity.end()) {
+            ++date_it->second;
+        } else {
+            if (pages::activity.size() >= 180) {
+                pages::activity.clear();
+            }
+            pages::activity[date] = 1;
         }
-        pages::activity[date] = 1;
     }
-    pages::stats_mutex.unlock();
 
     bool admin = false;
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
             ERR("Authentication not provided");
-            if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
+            if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -176,13 +182,13 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             std::vector<std::string> split_auth = pw::string::split_and_trim(req.headers["Proxy-Authorization"], ' ');
             if (split_auth.size() < 2) {
                 ERR("Authorization failed: Bad Proxy-Authorization header");
-                if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                     ERR_WEB;
                 }
                 return;
             } else if (pw::string::to_lower_copy(split_auth[0]) != "basic") {
                 ERR("Authorization failed: Unsupported authentication scheme");
-                if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                     ERR_WEB;
                 }
                 return;
@@ -193,35 +199,48 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
                 std::vector<std::string> split_decoded_auth = pw::string::split(decoded_auth_string, ':');
                 if (split_decoded_auth.size() != 2 || split_decoded_auth[0].empty()) {
                     ERR("Authorization failed: Bad username:password combination");
-                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
+                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                         ERR_WEB;
                     }
                     return;
                 }
 
-                pages::stats_mutex.lock();
-                decltype(pages::users)::iterator user_it;
-                if ((user_it = pages::users.find(split_decoded_auth[0])) != pages::users.end()) {
-                    ++user_it->second;
-                } else {
-                    if (pages::users.size() >= 1024) {
-                        pages::users.clear();
+                {
+                    std::lock_guard<std::mutex> lock(pages::stats_mutex);
+                    decltype(pages::users)::iterator user_it;
+                    if ((user_it = pages::users.find(split_decoded_auth[0])) != pages::users.end()) {
+                        ++user_it->second;
+                    } else {
+                        if (pages::users.size() >= 1024) {
+                            pages::users.clear();
+                        }
+                        pages::users[split_decoded_auth[0]] = 1;
                     }
-                    pages::users[split_decoded_auth[0]] = 1;
                 }
-                pages::stats_mutex.unlock();
+                {
+                    std::unique_lock<std::mutex> lock(deauthenticated_users_mutex);
+                    decltype(deauthenticated_users)::iterator user_it;
+                    if ((user_it = deauthenticated_users.find(split_decoded_auth[0])) != deauthenticated_users.end()) {
+                        deauthenticated_users.erase(user_it);
+                        lock.unlock();
+                        if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version, req.method == "HEAD") == PN_ERROR) {
+                            ERR_WEB;
+                        }
+                        return;
+                    }
+                }
 
                 if (split_decoded_auth[1] == admin_password) {
                     admin = true;
                 } else if (bans::is_banned(split_decoded_auth[0])) {
                     ERR("Authorization failed: Banned user " << std::quoted(split_decoded_auth[0]) << " tried to connect");
-                    if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+                    if (conn->send_basic(403, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                         ERR_WEB;
                     }
                     return;
                 } else if (split_decoded_auth[1] != password) {
                     ERR("Authorization failed: Incorrect password");
-                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
+                    if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                         ERR_WEB;
                     }
                     return;
@@ -316,7 +335,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         route(std::move(proxy), proxy_buf_receiver, std::move(conn));
     } else {
         if (password.empty() && req.target == "/stats") {
-            if (conn->send(pages::stats_page(req.http_version)) == PN_ERROR) {
+            if (conn->send(pages::stats_page(req.http_version), req.method == "HEAD") == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -326,7 +345,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         if (url_info.parse(req.target) == PN_ERROR) {
             ERR_WEB;
             ERR("Failed to parse URL " << req.target);
-            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+            if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -338,7 +357,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             (connection_it = req.headers.find("Connection")) != req.headers.end() &&
             pw::string::to_lower_copy(connection_it->second) == "upgrade") {
             ERR("Client attempted to upgrade with an absolute-form target request");
-            if (conn->send_basic(501, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
+            if (conn->send_basic(501, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version, req.method == "HEAD") == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -350,7 +369,7 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             pages::stats_mutex.lock();
             ++pages::ads_blocked;
             pages::stats_mutex.unlock();
-            if (conn->send(pages::error_page(403, url_info.host, reason, req.http_version)) == PN_ERROR) {
+            if (conn->send(pages::error_page(403, url_info.host, reason, req.http_version), req.method == "HEAD") == PN_ERROR) {
                 ERR_WEB;
             }
             return;
@@ -363,44 +382,40 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
             if (url_info.path == "/") {
                 resp = pages::stats_page(req.http_version);
             } else if (url_info.path == "/change_username") {
-                if (conn->send_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version) == PN_ERROR) {
-                    ERR_WEB;
-                }
-                return;
+                resp = pw::HTTPResponse::make_basic(407, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE, PROXY_AUTHENTICATE_BASIC}, req.http_version);
             } else if (url_info.path == "/ban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
                     bans::ban(username_it->second);
-                    if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
-                        ERR_WEB;
-                    }
+                    resp = pw::HTTPResponse::make_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
                 } else {
-                    if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
-                        ERR_WEB;
-                    }
+                    resp = pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
                 }
-                return;
             } else if (url_info.path == "/unban") {
                 pw::QueryParameters::map_type::const_iterator username_it;
                 if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
                     bans::unban(username_it->second);
-                    if (conn->send_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
-                        ERR_WEB;
-                    }
+                    resp = pw::HTTPResponse::make_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
                 } else {
-                    if (conn->send_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version) == PN_ERROR) {
-                        ERR_WEB;
-                    }
+                    resp = pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
                 }
-                return;
+            } else if (url_info.path == "/deauthenticate") {
+                pw::QueryParameters::map_type::const_iterator username_it;
+                if ((username_it = req.query_parameters->find("username")) != req.query_parameters->end()) {
+                    deauthenticated_users_mutex.lock();
+                    deauthenticated_users.insert(username_it->second);
+                    deauthenticated_users_mutex.unlock();
+                    resp = pw::HTTPResponse::make_basic(200, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
+                } else {
+                    resp = pw::HTTPResponse::make_basic(400, {CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, req.http_version);
+                }
             } else {
-                resp = pages::error_page(404, url_info.host, req.target + " could not be found", req.http_version);
+                resp = pages::error_page(404, url_info.host, req.target + " does not exist", req.http_version);
             }
 
             if (conn->send(resp, req.method == "HEAD") == PN_ERROR) {
                 ERR_WEB;
             }
-
             return;
         }
 

@@ -58,12 +58,17 @@ namespace pages {
                 return a.second > b.second;
             });
             for (const auto& user : user_pairs) {
-                html << "<li>" << pw::xml_escape(user.first) << " - " << user.second << " request(s) ";
+                html << "<li>" << pw::xml_escape(user.first) << " - " << user.second << (user.second == 1 ? " request" : " requests");
+
+                html << " (";
                 if (bans::is_banned(user.first)) {
-                    html << "(<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(user.first) << "'); return false;\">Unban</a>)";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(user.first) << "'); return false;\">Unban</a>";
                 } else {
-                    html << "(<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::xml_escape(user.first) << "'); return false;\">Ban</a>)";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::xml_escape(user.first) << "'); return false;\">Ban</a>";
                 }
+                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate('" << pw::xml_escape(user.first) << "'); return false;\">Deauthenticate</a>";
+                html << ')';
+
                 html << "</li>";
             }
             html << "</ol>";
@@ -153,6 +158,14 @@ namespace pages {
                 if (username !== null) {
                     fetch("http://stats.gov/unban?" +  new URLSearchParams({username}), {
                         method: "DELETE",
+                    }).then(resp => window.location.reload());
+                }
+            }
+
+            function deauthenticate(username) {
+                if (username !== null) {
+                    fetch("http://stats.gov/deauthenticate?" +  new URLSearchParams({username}), {
+                        method: "PUT",
                     }).then(resp => window.location.reload());
                 }
             }
