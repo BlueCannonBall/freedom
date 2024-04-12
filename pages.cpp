@@ -79,7 +79,7 @@ namespace pages {
                 html << "<p><strong>Banned users:</strong></p>";
                 html << "<ul>";
                 for (const auto& username : bans) {
-                    html << "<li>" << pw::xml_escape(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(username) << "'); return false;\">Unban</a>)</li>";
+                    html << "<li>" << pw::xml_escape(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(username) << "'); return false;\">unban</a>)</li>";
                 }
                 html << "</ul>";
             }
