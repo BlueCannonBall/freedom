@@ -167,7 +167,7 @@ namespace pages {
                 if (username !== null) {
                     fetch("http://stats.gov/deauthenticate?" +  new URLSearchParams({username}), {
                         method: "PUT",
-                    }).then(resp => window.location.reload());
+                    });
                 }
             }
         )delimiter";
