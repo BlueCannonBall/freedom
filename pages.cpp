@@ -62,11 +62,11 @@ namespace pages {
 
                 html << " (";
                 if (bans::is_banned(user.first)) {
-                    html << "<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(user.first) << "'); return false;\">Unban</a>";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(user.first) << "'); return false;\">unban</a>";
                 } else {
-                    html << "<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::xml_escape(user.first) << "'); return false;\">Ban</a>";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::xml_escape(user.first) << "'); return false;\">ban</a>";
                 }
-                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate('" << pw::xml_escape(user.first) << "'); return false;\">Deauthenticate</a>";
+                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate('" << pw::xml_escape(user.first) << "'); return false;\">deauthenticate</a>";
                 html << ')';
 
                 html << "</li>";
@@ -86,6 +86,7 @@ namespace pages {
 
             html << "<p><a href=\"#\" role=\"button\" onclick=\"changeUsername(); return false;\">Change Username</a></p>";
             html << "<p><a href=\"#\" role=\"button\" onclick=\"ban(prompt('Enter a username to ban')); return false;\">Ban Another User</a></p>";
+            html << "<p><a href=\"#\" role=\"button\" onclick=\"deauthenticate(prompt('Enter a username to deauthenticate')); return false;\">Deauthenticate Another User</a></p>";
         }
         html << "</div>";
 
