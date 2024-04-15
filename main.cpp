@@ -421,7 +421,6 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 
         // Prepare request
         req.target = url_info.path;
-        req.headers["Accept-Encoding"] = "chunked";
         req.headers.insert(CONNECTION_CLOSE);
 
         INFO("Routing HTTP request to " << url_info.host);
