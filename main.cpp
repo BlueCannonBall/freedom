@@ -485,9 +485,6 @@ int main(int argc, char* argv[]) {
         "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/domains/pro.txt",
         "This content is advertising.");
     adblock::register_blacklist(
-        "https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt",
-        "This content is advertising.");
-    adblock::register_blacklist(
         "https://hosts.anudeep.me/mirror/adservers.txt",
         "This content is advertising.");
     adblock::register_blacklist(
