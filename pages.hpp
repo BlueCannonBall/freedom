@@ -17,6 +17,6 @@ namespace pages {
     extern std::unordered_map<std::string, unsigned long long> users;
     extern std::map<std::string, unsigned long long> activity;
 
-    pw::HTTPResponse stats_page(const std::string& http_version = "HTTP/1.1");
-    pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const std::string& error_message, const std::string& http_version = "HTTP/1.1");
+    pw::HTTPResponse stats_page(pn::StringView http_version = "HTTP/1.1");
+    pw::HTTPResponse error_page(uint16_t status_code, pn::StringView host, pn::StringView error_message, pn::StringView http_version = "HTTP/1.1");
 } // namespace pages

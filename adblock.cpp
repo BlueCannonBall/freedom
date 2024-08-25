@@ -16,10 +16,10 @@ namespace adblock {
         std::string reason;
 
         Blacklist() = default;
-        Blacklist(const std::string& reason):
+        Blacklist(pn::StringView reason):
             reason(reason) {}
 
-        void update(const std::string& url) {
+        void update(pn::StringView url) {
             auto now = std::chrono::steady_clock::now();
             if (hostnames.empty() || now - last_updated > std::chrono::hours(24)) {
                 pw::HTTPResponse resp;
@@ -49,7 +49,7 @@ namespace adblock {
     std::mutex mutex;
     std::unordered_map<std::string, Blacklist> blacklists;
 
-    void register_blacklist(const std::string& url, const std::string& reason) {
+    void register_blacklist(const std::string& url, pn::StringView reason) {
         std::lock_guard<std::mutex> lock(mutex);
         blacklists[url] = Blacklist(reason);
     }

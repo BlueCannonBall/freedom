@@ -24,7 +24,7 @@ namespace bans {
         return ret;
     }
 
-    void ban(const std::string& username) {
+    void ban(pn::StringView username) {
         thread_local sqlite::Statement stmt(db, "INSERT OR IGNORE INTO bans (username) VALUES (?)");
         stmt.bind(username, 1);
         stmt.exec_void();
@@ -32,7 +32,7 @@ namespace bans {
         stmt.reset();
     }
 
-    void unban(const std::string& username) {
+    void unban(pn::StringView username) {
         thread_local sqlite::Statement stmt(db, "DELETE FROM bans WHERE username = ?");
         stmt.bind(username, 1);
         stmt.exec_void();
@@ -40,7 +40,7 @@ namespace bans {
         stmt.reset();
     }
 
-    bool is_banned(const std::string& username) {
+    bool is_banned(pn::StringView username) {
         thread_local sqlite::Statement stmt(db, "SELECT username FROM bans WHERE username = ?");
         stmt.bind(username, 1);
         auto table = stmt.exec<sqlite::Text>();

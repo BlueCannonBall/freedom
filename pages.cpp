@@ -27,7 +27,7 @@ namespace pages {
         }
     };
 
-    pw::HTTPResponse stats_page(const std::string& http_version) {
+    pw::HTTPResponse stats_page(pn::StringView http_version) {
         std::lock_guard<std::mutex> lock(stats_mutex);
         std::ostringstream html;
         html.imbue(std::locale(std::locale("C"), new CommaNumpunct));
@@ -178,7 +178,7 @@ namespace pages {
         return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
     }
 
-    pw::HTTPResponse error_page(uint16_t status_code, const std::string& host, const std::string& error_message, const std::string& http_version) {
+    pw::HTTPResponse error_page(uint16_t status_code, pn::StringView host, pn::StringView error_message, pn::StringView http_version) {
         std::ostringstream html;
         html << "<html>";
         html << "<head>";

@@ -1,7 +1,7 @@
 #ifndef _SQLITE_HPP
 #define _SQLITE_HPP
 
-#include <iostream>
+#include "Polyweb/Polynet/string.hpp"
 #include <optional>
 #include <sqlite3.h>
 #include <stdexcept>
@@ -31,7 +31,7 @@ namespace sqlite {
 
     public:
         Connection() = default;
-        Connection(const std::string& filename, int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX) {
+        Connection(pn::StringView filename, int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX) {
             int result;
             if ((result = sqlite3_open_v2(filename.c_str(), &raw_conn, flags, nullptr)) != SQLITE_OK) {
                 throw Error(errstr(result));
@@ -53,7 +53,7 @@ namespace sqlite {
             sqlite3_close(raw_conn);
         }
 
-        void init(const std::string& filename, int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX) {
+        void init(pn::StringView filename, int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX) {
             sqlite3_close(raw_conn);
 
             int result;
@@ -70,14 +70,14 @@ namespace sqlite {
             return sqlite3_errmsg(raw_conn);
         }
 
-        void exec(const std::string& sql) {
+        void exec(pn::StringView sql) {
             int result;
             if ((result = sqlite3_exec(raw_conn, sql.c_str(), nullptr, nullptr, nullptr)) != SQLITE_OK) {
                 throw Error(errstr(result));
             }
         }
 
-        void exec_nothrow(const std::string& sql) {
+        void exec_nothrow(pn::StringView sql) {
             sqlite3_exec(raw_conn, sql.c_str(), nullptr, nullptr, nullptr);
         }
     };
@@ -141,7 +141,7 @@ namespace sqlite {
 
     public:
         Statement() = default;
-        Statement(const Connection& conn, const std::string& sql) {
+        Statement(const Connection& conn, pn::StringView sql) {
             int result;
             if ((result = sqlite3_prepare_v2(conn.raw_conn, sql.c_str(), -1, &raw_stmt, nullptr)) != SQLITE_OK) {
                 throw Error(errstr(result));
@@ -163,7 +163,7 @@ namespace sqlite {
             sqlite3_finalize(raw_stmt);
         }
 
-        void init(const Connection& conn, const std::string& sql) {
+        void init(const Connection& conn, pn::StringView sql) {
             sqlite3_finalize(raw_stmt);
 
             int result;
@@ -201,6 +201,13 @@ namespace sqlite {
         }
 
         void bind(const Text& value, size_t index) {
+            int result;
+            if ((result = sqlite3_bind_text(raw_stmt, index, value.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK) {
+                throw Error(errstr(result));
+            }
+        }
+
+        void bind(pn::StringView value, size_t index) {
             int result;
             if ((result = sqlite3_bind_text(raw_stmt, index, value.c_str(), -1, SQLITE_TRANSIENT)) != SQLITE_OK) {
                 throw Error(errstr(result));

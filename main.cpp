@@ -35,6 +35,8 @@ class SetupWindow final : public Fl_Window {
     Fl_Button* start_button;
     Fl_Button* cancel_button;
 
+    bool setup_complete = false;
+
 public:
     SetupWindow(const char* title = "Freedom Setup"):
         Fl_Window(350, 165, title) {
@@ -76,20 +78,24 @@ public:
                 admin_password = setup_window->admin_password_input->value();
             }
             setup_window->hide();
+            setup_window->setup_complete = true;
         },
             this);
 
         cancel_button->callback([](Fl_Widget* widget, void* data) {
             auto setup_window = (SetupWindow*) data;
             setup_window->hide();
-            exit(0);
         },
             this);
+    }
 
-        callback([](Fl_Widget* widget) {
-            widget->hide();
-            exit(0);
-        });
+    bool run() {
+        show();
+        while (shown()) {
+            Fl::wait();
+        }
+        Fl::check();
+        return setup_complete;
     }
 };
 
@@ -451,9 +457,8 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         SetupWindow setup_window;
-        setup_window.show();
-        if (int result = Fl::run()) {
-            return result;
+        if (!setup_window.run()) {
+            return 1;
         }
     } else {
         port = argv[1];
