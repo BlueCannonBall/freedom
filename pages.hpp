@@ -2,10 +2,10 @@
 
 #include "Polyweb/polyweb.hpp"
 #include <chrono>
-#include <ctime>
 #include <map>
 #include <mutex>
 #include <string>
+#include <time.h>
 #include <unordered_map>
 
 namespace pages {

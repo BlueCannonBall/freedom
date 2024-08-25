@@ -9,8 +9,6 @@
 #include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Spinner.H>
 #include <FL/Fl_Window.H>
-#include <cmath>
-#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
