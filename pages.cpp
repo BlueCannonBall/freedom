@@ -62,11 +62,11 @@ namespace pages {
 
                 html << " (";
                 if (bans::is_banned(user.first)) {
-                    html << "<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(user.first) << "'); return false;\">unban</a>";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"unban(" << std::quoted(pw::xml_escape(user.first), '\'') << "); return false;\">unban</a>";
                 } else {
-                    html << "<a href=\"#\" role=\"button\" onclick=\"ban('" << pw::xml_escape(user.first) << "'); return false;\">ban</a>";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"ban(" << std::quoted(pw::xml_escape(user.first), '\'') << "); return false;\">ban</a>";
                 }
-                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate('" << pw::xml_escape(user.first) << "'); return false;\">deauthenticate</a>";
+                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate(" << std::quoted(pw::xml_escape(user.first), '\'') << "); return false;\">deauthenticate</a>";
                 html << ')';
 
                 html << "</li>";
@@ -79,7 +79,7 @@ namespace pages {
                 html << "<p><strong>Banned users:</strong></p>";
                 html << "<ul>";
                 for (const auto& username : bans) {
-                    html << "<li>" << pw::xml_escape(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban('" << pw::xml_escape(username) << "'); return false;\">unban</a>)</li>";
+                    html << "<li>" << pw::xml_escape(username) << " (<a href=\"#\" role=\"button\" onclick=\"unban(" << std::quoted(pw::xml_escape(username), '\'') << "); return false;\">unban</a>)</li>";
                 }
                 html << "</ul>";
             }
