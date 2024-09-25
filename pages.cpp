@@ -29,6 +29,12 @@ namespace pages {
 
     pw::HTTPResponse stats_page(pn::StringView http_version) {
         std::lock_guard<std::mutex> lock(stats_mutex);
+
+        std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
+        std::sort(user_pairs.begin(), user_pairs.end(), [](const auto& a, const auto& b) {
+            return a.second > b.second;
+        });
+
         std::ostringstream html;
         html.imbue(std::locale(std::locale("C"), new CommaNumpunct));
         html << std::fixed << std::setprecision(3);
@@ -49,24 +55,20 @@ namespace pages {
         html << "<p><strong>Requests per second:</strong> " << (float) requests_handled / (time(nullptr) - running_since) << "</p>";
         html << "<p><strong>Average response time:</strong> " << (float) response_time.count() / requests_handled << "ms</p>";
 
-        if (!users.empty()) {
-            html << "<p><strong># of users:</strong> " << users.size() << "</p>";
+        if (!user_pairs.empty()) {
+            html << "<p><strong># of users:</strong> " << user_pairs.size() << "</p>";
             html << "<p><strong>Most active users:</strong></p>";
             html << "<ol>";
-            std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
-            std::sort(user_pairs.begin(), user_pairs.end(), [](const auto& a, const auto& b) {
-                return a.second > b.second;
-            });
-            for (const auto& user : user_pairs) {
-                html << "<li>" << pw::xml_escape(user.first) << " - " << user.second << (user.second == 1 ? " request" : " requests");
+            for (size_t i = 0; i < user_pairs.size(); ++i) {
+                html << "<li>" << pw::xml_escape(user_pairs[i].first) << " - " << user_pairs[i].second << (user_pairs[i].second == 1 ? " request" : " requests");
 
                 html << " (";
-                if (bans::is_banned(user.first)) {
-                    html << "<a href=\"#\" role=\"button\" onclick=\"unban(" << std::quoted(pw::xml_escape(user.first), '\'') << "); return false;\">unban</a>";
+                if (bans::is_banned(user_pairs[i].first)) {
+                    html << "<a href=\"#\" role=\"button\" onclick=\"unban(usernames[" << i << "]); return false;\">unban</a>";
                 } else {
-                    html << "<a href=\"#\" role=\"button\" onclick=\"ban(" << std::quoted(pw::xml_escape(user.first), '\'') << "); return false;\">ban</a>";
+                    html << "<a href=\"#\" role=\"button\" onclick=\"ban(usernames[" << i << "]); return false;\">ban</a>";
                 }
-                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate(" << std::quoted(pw::xml_escape(user.first), '\'') << "); return false;\">deauthenticate</a>";
+                html << ", <a href=\"#\" role=\"button\" onclick=\"deauthenticate(usernames[" << i << "]); return false;\">deauthenticate</a>";
                 html << ')';
 
                 html << "</li>";
@@ -100,16 +102,23 @@ namespace pages {
 
         html << "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>";
         html << "<script>";
-        html << "const labels = [";
+        html << "const usernames = [";
+        for (const auto& user : user_pairs) {
+            html << std::quoted(user.first) << ',';
+        }
+        html << "];";
+
+        html << "const chartLabels = [";
         for (const auto& date : activity) {
             html << std::quoted(date.first) << ',';
         }
         html << "];";
-        html << "const data = [";
+        html << "const chartData = [";
         for (const auto& date : activity) {
             html << std::to_string(date.second) << ',';
         }
         html << "];";
+
         html << R"delimiter(
             const ctx = document.getElementById("chart");
 
@@ -117,11 +126,11 @@ namespace pages {
             new Chart(ctx, {
                 type: "bar",
                 data: {
-                    labels,
+                    labels: chartLabels,
                     datasets: [{
                         label: "# of Requests",
                         backgroundColor: "#FF4545",
-                        data,
+                        data: chartData,
                         borderWidth: 1,
                     }],
                 },
