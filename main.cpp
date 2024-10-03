@@ -174,6 +174,11 @@ void init_conn(pn::SharedSocket<pw::Connection> conn, pn::tcp::BufReceiver& conn
         }
     }
 
+    if (pw::string::to_lower_copy(req.target).find("mosyle") != std::string::npos) {
+        INFO("Got connection to enemy target " << std::quoted(req.target));
+        return;
+    }
+
     bool admin = false;
     if (!password.empty()) {
         if (!req.headers.count("Proxy-Authorization")) {
