@@ -27,7 +27,7 @@ namespace pages {
         }
     };
 
-    pw::HTTPResponse stats_page(pn::StringView http_version) {
+    pw::HTTPResponse stats_page(std::string http_version) {
         std::lock_guard<std::mutex> lock(stats_mutex);
 
         std::vector<std::pair<std::string, unsigned long long>> user_pairs(users.begin(), users.end());
@@ -184,10 +184,10 @@ namespace pages {
         html << "</body>";
 
         html << "</html>";
-        return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
+        return pw::HTTPResponse(200, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, std::move(http_version));
     }
 
-    pw::HTTPResponse error_page(uint16_t status_code, pn::StringView host, pn::StringView error_message, pn::StringView http_version) {
+    pw::HTTPResponse error_page(uint16_t status_code, pn::StringView host, pn::StringView error_message, std::string http_version) {
         std::ostringstream html;
         html << "<html>";
         html << "<head>";
@@ -203,6 +203,6 @@ namespace pages {
         html << "</body>";
 
         html << "</html>";
-        return pw::HTTPResponse(status_code, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, http_version);
+        return pw::HTTPResponse(status_code, html.str(), {{"Content-Type", "text/html"}, CONNECTION_CLOSE, PROXY_CONNECTION_CLOSE}, std::move(http_version));
     }
 } // namespace pages
